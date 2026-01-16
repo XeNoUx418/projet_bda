@@ -1,7 +1,36 @@
+# Python
 __pycache__/
-*.pyc
-.venv/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
 venv/
+ENV/
+
+# IDEs
 .vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
 Thumbs.db
+
+# Config
+*.env
+.env.local
+
+# Logs
 *.log
+
+# Database
+*.db
+*.sqlite3
+
+# Benchmark results
+benchmark_results/
+benchmark_*.json
+benchmark_*.html
+index_backup_*.json
