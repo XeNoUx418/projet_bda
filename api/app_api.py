@@ -67,6 +67,8 @@ def periodes():
             p.description,
             p.date_debut,
             p.date_fin,
+            p.generation_time_seconds,
+            p.generation_completed_at,
             CASE
                 WHEN EXISTS (
                     SELECT 1
@@ -93,13 +95,11 @@ def sessions():
             p.description,
             p.date_debut,
             p.date_fin,
-            CONCAT(
-                p.description, ' (',
-                DATE_FORMAT(p.date_debut, '%d %b %Y'),
-                ' → ',
-                DATE_FORMAT(p.date_fin, '%d %b %Y'),
-                ')'
-            ) AS label
+            p.description || ' (' ||
+            TO_CHAR(p.date_debut, 'DD Mon YYYY') ||
+            ' → ' ||
+            TO_CHAR(p.date_fin, 'DD Mon YYYY') ||
+            ')' AS label
         FROM periodes_examens p
         JOIN creneaux c ON c.id_periode = p.id_periode
         JOIN planning_examens pe ON pe.id_creneau = c.id_creneau
@@ -126,9 +126,9 @@ def schedule():
     df = query_df("""
         SELECT
             c.date                                   AS exam_date,
-            DATE_FORMAT(c.date, '%W, %M %d')         AS DateLabel,
-            TIME_FORMAT(c.heure_debut, '%H:%i')      AS Start,
-            TIME_FORMAT(c.heure_fin, '%H:%i')        AS End,
+            TO_CHAR(c.date, 'Day, Month DD')         AS DateLabel,
+            TO_CHAR(c.heure_debut, 'HH24:MI')        AS Start,
+            TO_CHAR(c.heure_fin, 'HH24:MI')          AS End,
             m.nom                                    AS Module,
             e.duree_minutes                          AS Duration,
             le.nom                                   AS Room,
@@ -240,9 +240,9 @@ def prof_schedule():
         SELECT
             pe.id_planning,
             c.date                                   AS exam_date,
-            DATE_FORMAT(c.date, '%W, %M %d')         AS DateLabel,
-            TIME_FORMAT(c.heure_debut, '%H:%i')      AS Start,
-            TIME_FORMAT(c.heure_fin, '%H:%i')        AS End,
+            TO_CHAR(c.date, 'Day, Month DD')         AS DateLabel,
+            TO_CHAR(c.heure_debut, 'HH24:MI')        AS Start,
+            TO_CHAR(c.heure_fin, 'HH24:MI')          AS End,
             m.nom                                    AS Module,
             e.duree_minutes                          AS Duration,
             le.nom                                   AS Room,
@@ -252,7 +252,7 @@ def prof_schedule():
                 pg.merged_groups,
                 CASE
                     WHEN pg.split_part IS NULL THEN g.code_groupe
-                    ELSE CONCAT(g.code_groupe, ' (Part ', pg.split_part, ')')
+                    ELSE g.code_groupe || ' (Part ' || pg.split_part || ')'
                 END
             ) AS GroupLabel
         FROM surveillances s
@@ -265,7 +265,7 @@ def prof_schedule():
         JOIN groupes g           ON g.id_groupe = pg.id_groupe
         WHERE s.id_prof = %s
           AND c.date BETWEEN %s AND %s
-        GROUP BY pe.id_planning
+        GROUP BY pe.id_planning, c.date, c.heure_debut, c.heure_fin, m.nom, e.duree_minutes, le.nom, le.type, le.batiment, pg.merged_groups, g.code_groupe, pg.split_part
         ORDER BY c.date, c.heure_debut
     """, params=[prof_id, date_start, date_end])
 
@@ -287,14 +287,19 @@ def create_periode():
     conn = get_conn()
     try:
         cur = conn.cursor()
+        
+        # PostgreSQL: Use RETURNING instead of lastrowid
         cur.execute("""
             INSERT INTO periodes_examens (date_debut, date_fin, description)
             VALUES (%s, %s, %s)
+            RETURNING id_periode
         """, (d_start, d_end, description))
-        period_id = cur.lastrowid
+        
+        period_id = cur.fetchone()[0]
 
-        # Stored procedure
-        cur.execute("CALL GenerateTimeSlotsForPeriod(%s)", (period_id,))
+        # PostgreSQL: SELECT function() instead of CALL procedure()
+        cur.execute("SELECT generate_time_slots_for_period(%s)", (period_id,))
+        
         conn.commit()
         return ok({"id_periode": period_id})
     finally:
@@ -324,6 +329,20 @@ def generate_planning(pid: int):
         if result.returncode != 0:
             return fail(result.stderr or "Generation failed", 500)
 
+        # Update generation time in database
+        conn = get_conn()
+        try:
+            cur = conn.cursor()
+            cur.execute("""
+                UPDATE periodes_examens 
+                SET generation_time_seconds = %s,
+                    generation_completed_at = NOW()
+                WHERE id_periode = %s
+            """, (round(elapsed, 2), pid))
+            conn.commit()
+        finally:
+            conn.close()
+
         return ok({"period_id": pid, "elapsed_seconds": round(elapsed, 2), "logs": result.stdout})
     except subprocess.TimeoutExpired:
         return fail("Generation script timed out (max 5 minutes)", 500)
@@ -335,7 +354,8 @@ def delete_planning(pid: int):
     conn = get_conn()
     try:
         cur = conn.cursor()
-        cur.execute("CALL DeletePlanningForPeriod(%s)", (pid,))
+        # PostgreSQL: SELECT function() instead of CALL procedure()
+        cur.execute("SELECT delete_planning_for_period(%s)", (pid,))
         conn.commit()
         return ok({"deleted_period": pid})
     finally:
@@ -347,8 +367,8 @@ def preview(pid: int):
     df = query_df("""
         SELECT
             c.date AS Date,
-            TIME_FORMAT(c.heure_debut,'%H:%i') AS Start,
-            TIME_FORMAT(c.heure_fin,'%H:%i') AS End,
+            TO_CHAR(c.heure_debut, 'HH24:MI') AS Start,
+            TO_CHAR(c.heure_fin, 'HH24:MI') AS End,
             m.nom AS Module,
             le.nom AS Room
         FROM planning_examens pe
@@ -368,13 +388,13 @@ def room_conflicts(pid: int):
         SELECT
             le.nom AS Room,
             c.date,
-            TIME_FORMAT(c.heure_debut,'%H:%i') AS Start,
+            TO_CHAR(c.heure_debut, 'HH24:MI') AS Start,
             COUNT(*) AS Exams
         FROM planning_examens pe
         JOIN lieux_examen le ON le.id_lieu = pe.id_lieu
         JOIN creneaux c      ON c.id_creneau = pe.id_creneau
         WHERE c.id_periode = %s
-        GROUP BY pe.id_lieu, c.date, c.heure_debut
+        GROUP BY le.nom, c.date, c.heure_debut
         HAVING COUNT(*) > 1
         ORDER BY c.date, c.heure_debut
     """, params=[pid])
@@ -392,9 +412,9 @@ def student_schedule():
     df = query_df("""
         SELECT
             c.date                                   AS exam_date,
-            DATE_FORMAT(c.date, '%W, %M %d')         AS DateLabel,
-            TIME_FORMAT(c.heure_debut, '%H:%i')      AS Start,
-            TIME_FORMAT(c.heure_fin, '%H:%i')        AS End,
+            TO_CHAR(c.date, 'Day, Month DD')         AS DateLabel,
+            TO_CHAR(c.heure_debut, 'HH24:MI')        AS Start,
+            TO_CHAR(c.heure_fin, 'HH24:MI')          AS End,
             m.nom                                    AS Module,
             e.duree_minutes                          AS Duration,
             le.nom                                   AS Room,
@@ -513,7 +533,7 @@ def dash_top_rooms():
             JOIN planning_examens pe ON l.id_lieu = pe.id_lieu
             JOIN creneaux c ON pe.id_creneau = c.id_creneau
             WHERE c.id_periode = %s
-            GROUP BY l.id_lieu
+            GROUP BY l.nom, l.type
             ORDER BY sessions DESC
         """, params=[periode_id])
     else:
@@ -521,7 +541,7 @@ def dash_top_rooms():
             SELECT l.nom, l.type, COUNT(pe.id_planning) as sessions
             FROM lieux_examen l
             JOIN planning_examens pe ON l.id_lieu = pe.id_lieu
-            GROUP BY l.id_lieu
+            GROUP BY l.nom, l.type
             ORDER BY sessions DESC
         """)
     return ok(df.to_dict(orient="records"))
@@ -538,7 +558,7 @@ def dash_prof_load():
             LEFT JOIN planning_examens pe ON s.id_planning = pe.id_planning
             LEFT JOIN creneaux c ON pe.id_creneau = c.id_creneau
             WHERE c.id_periode = %s
-            GROUP BY p.id_prof
+            GROUP BY p.nom, d.nom
             ORDER BY total_surveillances DESC
         """, params=[periode_id])
     else:
@@ -547,7 +567,7 @@ def dash_prof_load():
             FROM professeurs p
             JOIN departements d ON p.id_dept = d.id_dept
             LEFT JOIN surveillances s ON p.id_prof = s.id_prof
-            GROUP BY p.id_prof
+            GROUP BY p.nom, d.nom
             ORDER BY total_surveillances DESC
         """)
     return ok(df.to_dict(orient="records"))
@@ -560,13 +580,11 @@ def dash_prof_conflicts():
         SELECT
             p.nom AS Professor,
             c.date,
-            TIME_FORMAT(c.heure_debut, '%H:%i') AS Start,
+            TO_CHAR(c.heure_debut, 'HH24:MI') AS Start,
             COUNT(DISTINCT pe.id_examen) AS Assignments,
-            GROUP_CONCAT(
-                DISTINCT CONCAT(
-                    m.nom, ' — ',
-                    le.nom, ' (', le.type, ')'
-                ) SEPARATOR '<br>'
+            STRING_AGG(
+                DISTINCT m.nom || ' — ' || le.nom || ' (' || le.type || ')',
+                '<br>'
             ) AS Details
         FROM surveillances s
         JOIN professeurs p ON p.id_prof = s.id_prof
@@ -576,8 +594,9 @@ def dash_prof_conflicts():
         JOIN lieux_examen le ON le.id_lieu = pe.id_lieu
         JOIN creneaux c ON c.id_creneau = pe.id_creneau
         WHERE c.id_periode = %s
-        GROUP BY p.id_prof, c.date, c.heure_debut
-        HAVING COUNT(DISTINCT pe.id_examen) > 1;
+        GROUP BY p.nom, c.date, c.heure_debut
+        HAVING COUNT(DISTINCT pe.id_examen) > 1
+        ORDER BY c.date, c.heure_debut
     """, params=[periode_id])
 
     return ok(df.to_dict(orient="records"))
