@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Chef de Département • Planification des Examens</title>
+  
+  <link href="https://cdn.jsdelivr.net/npm/@coreui/coreui@5.0.0/dist/css/coreui.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@coreui/icons/css/all.min.css">
+  
+  <style>
+    body { 
+      background: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.7)), 
+                  url('https://images.unsplash.com/photo-1523050853021-ea9e12a06ce5?auto=format&fit=crop&q=80&w=2000'); 
+      background-size: cover;
+      background-position: center;
+      background-attachment: fixed;
+      min-height: 100vh;
+      color: white;
+    }
+
+    .header { 
+      background: rgba(255, 255, 255, 0.1) !important; 
+      backdrop-filter: blur(15px); 
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .custom-card {
+      background: rgba(255, 255, 255, 0.95);
+      border: none;
+      border-radius: 15px;
+      color: #2c3e50;
+    }
+
+    .form-label {
+      font-weight: 600;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      color: #6a7a8c;
+    }
+
+    .btn-back {
+      color: white;
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    .table-actions .btn {
+      padding: 0.25rem 0.5rem;
+      font-size: 0.75rem;
+    }
+
+    .status-panel {
+      background: #f1f4f9;
+      border-left: 4px solid #f9b115;
+    }
+  </style>
+</head>
+<body>
+
+  <header class="header header-sticky mb-4 p-3 shadow-sm">
+    <div class="container d-flex justify-content-between align-items-center">
+      <div class="d-flex align-items-center">
+        <a href="../index.html" class="btn-back me-3"><i class="cil-arrow-left"></i> Retour</a>
+        <div class="fw-bold text-uppercase border-start ps-3" style="letter-spacing: 1px;">
+          Gestion Département
+        </div>
+      </div>
+      <div class="badge rounded-pill bg-warning text-dark px-3 py-2">Administration</div>
+    </div>
+  </header>
+
+  <div class="container pb-5">
+    <div class="row">
+      <div class="col-12">
+        <div class="card custom-card shadow-lg">
+          <div class="card-header bg-transparent border-0 pt-4 px-4">
+            <h3 class="fw-bold mb-1">Sessions d'Examens</h3>
+            <p class="text-muted small">Créez des périodes, générez les plannings et détectez les conflits.</p>
+          </div>
+
+          <div class="card-body p-4">
+            <div class="row g-3 align-items-end mb-4 p-3 rounded" style="background: #f1f4f9;">
+              <div class="col-md-2">
+                <label class="form-label">Date de début</label>
+                <input id="start" type="date" class="form-control"/>
+              </div>
+              <div class="col-md-2">
+                <label class="form-label">Date de fin</label>
+                <input id="end" type="date" class="form-control"/>
+              </div>
+              <div class="col-md-5">
+                <label class="form-label">Description de la session</label>
+                <input id="desc" type="text" class="form-control" placeholder="Ex: Session Normale Automne 2026"/>
+              </div>
+              <div class="col-md-3 d-flex gap-2">
+                <button class="btn btn-warning w-100 fw-bold" id="create">
+                  <i class="cil-plus me-1"></i> Créer
+                </button>
+                <button class="btn btn-outline-secondary" id="refresh">
+                  <i class="cil-reload"></i>
+                </button>
+              </div>
+            </div>
+
+            <div id="msg" class="alert alert-secondary py-2 px-3 mb-4" role="alert">
+              En attente d'action...
+            </div>
+
+            <div class="table-responsive rounded border mb-4">
+              <table class="table table-hover mb-0">
+                <thead class="table-light text-uppercase small fw-bold">
+                  <tr>
+                    <th>ID</th>
+                    <th>Description</th>
+                    <th>Début</th>
+                    <th>Fin</th>
+                    <th>Planning</th>
+                    <th class="text-end">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="rows" class="align-middle">
+                  </tbody>
+              </table>
+            </div>
+
+            <div class="status-panel p-3 rounded small">
+              <div class="d-flex align-items-center">
+                <i class="cil-info text-warning fs-4 me-3"></i>
+                <div>
+                  <strong>Note technique :</strong> Les résultats de l'aperçu et de la détection de conflits s'affichent pour le moment dans la console du navigateur.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="../assets/js/manager.js"></script>
+</body>
+</html>

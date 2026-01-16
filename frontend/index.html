@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Gestion des Examens</title>
+  <link href="https://cdn.jsdelivr.net/npm/@coreui/coreui@5.0.0/dist/css/coreui.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@coreui/icons/css/all.min.css">
+  <style>
+    body { 
+      background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.7)), 
+                  url('https://images.unsplash.com/photo-1523050853021-ea9e12a06ce5?auto=format&fit=crop&q=80&w=2000'); 
+      background-size: cover;
+      background-position: center;
+      background-attachment: fixed;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      color: white;
+      font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    }
+    .header { 
+      background: rgba(255, 255, 255, 0.1) !important; 
+      backdrop-filter: blur(15px); 
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .role-card { 
+      background: rgba(255, 255, 255, 0.95);
+      transition: all 0.3s ease; 
+      cursor: pointer; 
+      text-decoration: none; 
+      color: #2c3e50; 
+      border: none; 
+      border-radius: 18px;
+    }
+    .role-card:hover { 
+      transform: translateY(-10px); 
+      box-shadow: 0 15px 35px rgba(0,0,0,0.5); 
+      background: #ffffff;
+    }
+    .icon-box {
+      width: 65px;
+      height: 65px;
+      margin: 0 auto 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      font-size: 26px;
+    }
+  </style>
+</head>
+<body>
+
+  <header class="header header-sticky mb-5 p-3 shadow-sm">
+    <div class="container d-flex justify-content-between align-items-center">
+      <div class="fw-bold text-uppercase" style="letter-spacing: 1.5px;">
+        <i class="cil-calendar me-2"></i> Planification des Examens
+      </div>
+      <div id="apiStatus" class="badge rounded-pill bg-dark border border-secondary px-3 py-2">
+        Connexion en cours...
+      </div>
+    </div>
+  </header>
+
+  <div class="container flex-grow-1 d-flex flex-column justify-content-center">
+    <div class="row mb-5 text-center">
+      <div class="col-12">
+        <h1 class="display-3 fw-bold mb-3">Portail Académique</h1>
+        <p class="fs-5 opacity-75">Veuillez sélectionner votre profil pour accéder aux calendriers et à la gestion.</p>
+      </div>
+    </div>
+
+    <div class="row g-4 pb-5">
+      <div class="col-md-6 col-lg-3">
+        <a href="./pages/student.html" class="card h-100 role-card shadow">
+          <div class="card-body text-center p-4">
+            <div class="icon-box text-primary" style="background-color: #eef2ff;">
+              <i class="cil-education"></i>
+            </div>
+            <h5 class="fw-bold">Étudiant</h5>
+            <p class="small text-muted mb-0">Consultez vos dates d'examens et vos lieux de passage.</p>
+          </div>
+        </a>
+      </div>
+
+      <div class="col-md-6 col-lg-3">
+        <a href="./pages/prof.html" class="card h-100 role-card shadow">
+          <div class="card-body text-center p-4">
+            <div class="icon-box text-info" style="background-color: #e0f2fe;">
+              <i class="cil-people"></i>
+            </div>
+            <h5 class="fw-bold">Professeur</h5>
+            <p class="small text-muted mb-0">Gérez vos surveillances et vos plannings de passage.</p>
+          </div>
+        </a>
+      </div>
+
+      <div class="col-md-6 col-lg-3">
+        <a href="./pages/manager.html" class="card h-100 role-card shadow">
+          <div class="card-body text-center p-4">
+            <div class="icon-box text-warning" style="background-color: #fffbeb;">
+              <i class="cil-settings"></i>
+            </div>
+            <h5 class="fw-bold">service-planification</h5>
+            <p class="small text-muted mb-0">Générez les sessions et résolvez les conflits d'horaires.</p>
+          </div>
+        </a>
+      </div>
+
+      <div class="col-md-6 col-lg-3">
+        <a href="./pages/dashboard.html" class="card h-100 role-card shadow">
+          <div class="card-body text-center p-4">
+            <div class="icon-box text-danger" style="background-color: #fef2f2;">
+              <i class="cil-chart-line"></i>
+            </div>
+            <h5 class="fw-bold">Vice-Doyen</h5>
+            <p class="small text-muted mb-0">Suivi stratégique, statistiques et alertes système.</p>
+          </div>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { API_BASE } from "./assets/js/config.js";
+    import { api } from "./assets/js/api.js";
+
+    const statusBadge = document.getElementById("apiStatus");
+
+    try {
+      await api.health();
+      statusBadge.classList.replace("bg-dark", "bg-success");
+      statusBadge.innerHTML = "● Système Connecté";
+    } catch (e) {
+      statusBadge.classList.replace("bg-dark", "bg-danger");
+      statusBadge.innerHTML = "● Système Hors-ligne";
+    }
+  </script>
+</body>
+</html>
