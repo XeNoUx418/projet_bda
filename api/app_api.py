@@ -8,6 +8,9 @@ import sys
 
 from db import query_df, get_conn
 
+PORT = int(os.environ.get("PORT", 5000))
+DEBUG = os.environ.get("DEBUG", "False") == "True"
+
 app = Flask(__name__)
 CORS(app)
 
@@ -580,4 +583,4 @@ def dash_prof_conflicts():
     return ok(df.to_dict(orient="records"))
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="0.0.0.0", port=PORT, debug=DEBUG)
