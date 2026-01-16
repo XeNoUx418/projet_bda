@@ -1,18 +1,11 @@
 #!/usr/bin/env python3
-import mysql.connector
 import sys
 from collections import defaultdict
 from datetime import datetime
 
-# --------------------------------------------------
-# CONFIG
-# --------------------------------------------------
-DB_CONFIG = {
-    "host": "localhost",
-    "user": "root",
-    "password": "",
-    "database": "exam_timetabling"
-}
+# Import PostgreSQL connector and our centralized DB config
+from db import get_conn
+from psycopg2.extras import RealDictCursor
 
 # --------------------------------------------------
 # MAIN SCHEDULER
@@ -21,8 +14,8 @@ class ExamScheduler:
 
     def __init__(self, period_id: int):
         self.period_id = period_id
-        self.conn = mysql.connector.connect(**DB_CONFIG)
-        self.cursor = self.conn.cursor(dictionary=True)
+        self.conn = get_conn()
+        self.cursor = self.conn.cursor(cursor_factory=RealDictCursor)
 
         # Global round-robin pointers
         self.slot_ptr = 0
@@ -41,8 +34,12 @@ class ExamScheduler:
             WHERE id_periode = %s
             ORDER BY date, heure_debut
         """, (self.period_id,))
+        
+        all_slots = self.cursor.fetchall()
+        
+        # Filter out Fridays (weekday 4)
         self.slots = [
-            s for s in self.cursor.fetchall()
+            s for s in all_slots
             if s["date"].weekday() != 4
         ]
 
@@ -114,7 +111,7 @@ class ExamScheduler:
         self.prof_daily = defaultdict(lambda: defaultdict(int))
         self.prof_total = defaultdict(int)
         
-        # ✅ NEW: Track which professors are assigned to which time slots
+        # Track which professors are assigned to which time slots
         # Format: prof_slot_assignments[prof_id][(date, time)] = exam_id
         self.prof_slot_assignments = defaultdict(dict)
 
@@ -380,12 +377,10 @@ class ExamScheduler:
                         print(f"  [SKIP] Exam {exam['id_examen']} (no slot)")
                         continue
 
-                    # ✅ CRITICAL FIX: Determine room type ONCE for the entire exam
-                    # If any pack uses an amphi, the exam requires amphi supervision (3 profs)
+                    # Determine room type ONCE for the entire exam
                     global_room_type = "amphi" if any(p["type"] == "amphi" for p in packs) else "salle"
                     
-                    # ✅ CRITICAL FIX: Pick professors ONCE per exam+slot
-                    # Now includes time slot check to prevent double-booking
+                    # Pick professors ONCE per exam+slot
                     shared_profs = self.pick_professors(
                         exam_dept=exam["id_dept"],
                         room_type=global_room_type,
@@ -405,15 +400,16 @@ class ExamScheduler:
                             print(f"  [SKIP] No room for pack")
                             continue
 
-                        # Insert planning_examens
+                        # ✅ PostgreSQL: Use RETURNING instead of lastrowid
                         self.cursor.execute("""
                             INSERT INTO planning_examens (id_examen, id_creneau, id_lieu)
                             VALUES (%s, %s, %s)
+                            RETURNING id_planning
                         """, (exam["id_examen"], slot["id_creneau"], room["id_lieu"]))
 
-                        planning_id = self.cursor.lastrowid
+                        planning_id = self.cursor.fetchone()["id_planning"]
 
-                        # ✅ CRITICAL FIX: Reuse the SAME professors for all packs
+                        # Reuse the SAME professors for all packs
                         for pid in shared_profs:
                             self.cursor.execute("""
                                 INSERT INTO surveillances (id_prof, id_planning)
