@@ -1,0 +1,9 @@
+# Local Development
+PGHOST=localhost
+PGPORT=5432
+PGUSER=postgres
+PGPASSWORD=your_password
+PGDATABASE=exam_timetabling
+DEBUG=False
+FLASK_ENV=development
+PORT=5000
