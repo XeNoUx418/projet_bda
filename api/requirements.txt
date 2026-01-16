@@ -1,4 +1,7 @@
-flask==2.3.0
-flask-cors==4.0.0
-mysql-connector-python==8.0.33
-pandas==2.0.0
+# Requirements for the project
+
+# PostgreSQL dependencies
+psycopg2
+sqlalchemy
+
+# Other dependencies can be added here as needed
