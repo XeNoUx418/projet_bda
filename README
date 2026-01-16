@@ -1,0 +1,183 @@
+# Exam Timetabling Web Application
+
+## Overview
+
+This project is a **web-based exam timetabling system** that allows a department manager to create exam periods, automatically generate exam schedules, detect conflicts, and allow students and professors to consult their schedules.
+
+The application is composed of:
+
+* A **backend API** (Flask) located in the `api/` folder
+* A **frontend** (HTML/CSS/JavaScript) located in the `frontend/` folder
+* **Scheduling and assignment scripts** used by the API
+
+---
+
+## Project Structure
+
+```
+exam_app-v4.0/
+│
+├── api/                    # Backend (Flask API)
+│   ├── app_api.py
+│   ├── db.py
+│   └── __init__.py
+│
+├── frontend/               # Frontend (Web UI)
+│   └── pages/
+│       ├── manager.html    # Chef de département interface
+│       ├── student.html    # Student interface
+│       └── professor.html  # Professor interface
+│
+├── generate_schedule.py    # Exam scheduling logic
+├── generate_assign.py      # Assignment logic (requires period_id)
+├── assign_professors.py
+├── db.py
+├── requirements.txt
+└── Database/               # SQL scripts
+    ├── tables.sql
+    ├── triggers.sql
+    ├── procedures.sql
+    └── data.sql
+```
+
+---
+
+## Requirements
+
+* Python 3.10+
+* Flask
+* MySQL (or compatible DB)
+
+Install dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
+---
+
+## How to Run the Application
+
+### 1. Start the Backend API
+
+From the **project root directory**:
+
+```bash
+python -m api.app_api
+```
+
+The API will run on:
+
+```
+http://127.0.0.1:5000
+```
+
+Health check:
+
+```
+http://127.0.0.1:5000/api/health
+```
+
+---
+
+### 2. Open the Frontend
+
+Use **Live Server** or any static server to open the HTML pages.
+
+* Manager (Chef de département):
+
+```
+frontend/pages/manager.html
+```
+
+* Student:
+
+```
+frontend/pages/student.html
+```
+
+* Professor:
+
+```
+frontend/pages/professor.html
+```
+
+The frontend typically runs on:
+
+```
+http://127.0.0.1:5500
+```
+
+---
+
+## Application Workflow
+
+### Manager (Chef de département)
+
+1. Create an exam period (start date, end date, description)
+2. Generate the exam planning
+3. Preview the planning
+4. Detect conflicts (students, professors, rooms)
+
+### Student
+
+* Consult personal exam schedule
+
+### Professor
+
+* Consult invigilation (surveillance) schedule
+
+---
+
+## Notes on Scripts
+
+### `generate_assign.py`
+
+* Requires a `period_id` argument
+* Example:
+
+```bash
+python generate_assign.py 1
+```
+
+* **This script is normally called automatically by the API** when clicking **Generate** in the Manager interface
+* Manual execution is optional and only used for testing
+
+---
+
+## Common Errors & Fixes
+
+### ❌ File not found: generate_assign.py
+
+Cause: Running the script from the wrong directory
+
+Fix:
+
+```bash
+cd exam_app-v4.0
+python generate_assign.py <period_id>
+```
+
+### ❌ API not reachable
+
+Cause: Backend not running
+
+Fix:
+
+```bash
+python -m api.app_api
+```
+
+---
+
+## Status
+
+✅ Backend working
+✅ Frontend working
+✅ End-to-end workflow tested
+
+---
+
+## Author / Project Context
+
+This project was developed as part of an **academic exam timetabling system**, focusing on automation, conflict detection, and role-based access (manager, student, professor).

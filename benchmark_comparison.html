@@ -1,0 +1,291 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Index Performance Comparison</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        .header h1 { margin: 0; }
+        .summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .card h3 { margin: 0 0 10px 0; color: #667eea; }
+        .card .value { font-size: 2em; font-weight: bold; color: #333; }
+        .card .label { font-size: 0.9em; color: #666; margin-top: 5px; }
+        table {
+            width: 100%;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        th {
+            background: #667eea;
+            color: white;
+            padding: 12px;
+            text-align: left;
+        }
+        td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #eee;
+        }
+        tr:hover { background: #f9f9f9; }
+        .speedup-high { color: #27ae60; font-weight: bold; }
+        .speedup-medium { color: #f39c12; font-weight: bold; }
+        .speedup-low { color: #e74c3c; font-weight: bold; }
+        .section { margin: 30px 0; }
+        .section h2 { 
+            background: #f0f0f0; 
+            padding: 15px; 
+            border-left: 4px solid #667eea;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📊 Index Performance Comparison</h1>
+        <p>Benchmark: With Indexes vs Without Indexes</p>
+        <p>Generated: 2026-01-15 22:39:25</p>
+    </div>
+    
+    <div class="summary">
+        <div class="card">
+            <h3>With Indexes</h3>
+            <div class="value">9.85ms</div>
+            <div class="label">Average Query Time</div>
+        </div>
+        <div class="card">
+            <h3>Without Indexes</h3>
+            <div class="value">9.20ms</div>
+            <div class="label">Average Query Time</div>
+        </div>
+        <div class="card">
+            <h3>Overall Speedup</h3>
+            <div class="value">0.9x</div>
+            <div class="label">Faster with Indexes</div>
+        </div>
+        <div class="card">
+            <h3>Time Saved</h3>
+            <div class="value">-0.6ms</div>
+            <div class="label">Per Query Average</div>
+        </div>
+    </div>
+    
+    <div class="section">
+        <h2>📈 All Queries Comparison</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Query</th>
+                    <th>Category</th>
+                    <th>With Indexes</th>
+                    <th>Without Indexes</th>
+                    <th>Speedup</th>
+                    <th>Improvement</th>
+                </tr>
+            </thead>
+            <tbody>
+
+                <tr>
+                    <td><strong>departments</strong></td>
+                    <td>Reference Data</td>
+                    <td>0.85ms</td>
+                    <td>1.48ms</td>
+                    <td class="speedup-low">1.7x</td>
+                    <td>42.5%</td>
+                </tr>
+
+                <tr>
+                    <td><strong>periods_with_planning</strong></td>
+                    <td>Reference Data</td>
+                    <td>1.09ms</td>
+                    <td>1.62ms</td>
+                    <td class="speedup-low">1.5x</td>
+                    <td>32.6%</td>
+                </tr>
+
+                <tr>
+                    <td><strong>formations</strong></td>
+                    <td>Reference Data</td>
+                    <td>1.44ms</td>
+                    <td>1.92ms</td>
+                    <td class="speedup-low">1.3x</td>
+                    <td>24.6%</td>
+                </tr>
+
+                <tr>
+                    <td><strong>student_schedule</strong></td>
+                    <td>Student Interface</td>
+                    <td>3.33ms</td>
+                    <td>4.31ms</td>
+                    <td class="speedup-low">1.3x</td>
+                    <td>22.8%</td>
+                </tr>
+
+                <tr>
+                    <td><strong>load_rooms</strong></td>
+                    <td>Scheduler Algorithm</td>
+                    <td>0.62ms</td>
+                    <td>0.81ms</td>
+                    <td class="speedup-low">1.3x</td>
+                    <td>23.3%</td>
+                </tr>
+
+                <tr>
+                    <td><strong>professor_schedule</strong></td>
+                    <td>Professor Interface</td>
+                    <td>7.17ms</td>
+                    <td>8.50ms</td>
+                    <td class="speedup-low">1.2x</td>
+                    <td>15.7%</td>
+                </tr>
+
+                <tr>
+                    <td><strong>load_slots</strong></td>
+                    <td>Scheduler Algorithm</td>
+                    <td>1.05ms</td>
+                    <td>1.21ms</td>
+                    <td class="speedup-low">1.1x</td>
+                    <td>13.0%</td>
+                </tr>
+
+                <tr>
+                    <td><strong>load_groups</strong></td>
+                    <td>Scheduler Algorithm</td>
+                    <td>4.39ms</td>
+                    <td>4.81ms</td>
+                    <td class="speedup-low">1.1x</td>
+                    <td>8.7%</td>
+                </tr>
+
+                <tr>
+                    <td><strong>prof_conflicts</strong></td>
+                    <td>Conflict Detection</td>
+                    <td>56.41ms</td>
+                    <td>58.28ms</td>
+                    <td class="speedup-low">1.0x</td>
+                    <td>3.2%</td>
+                </tr>
+
+                <tr>
+                    <td><strong>load_exams</strong></td>
+                    <td>Scheduler Algorithm</td>
+                    <td>8.26ms</td>
+                    <td>8.02ms</td>
+                    <td class="speedup-low">1.0x</td>
+                    <td>-3.0%</td>
+                </tr>
+
+                <tr>
+                    <td><strong>professor_load</strong></td>
+                    <td>Dashboard KPIs</td>
+                    <td>23.52ms</td>
+                    <td>22.48ms</td>
+                    <td class="speedup-low">1.0x</td>
+                    <td>-4.6%</td>
+                </tr>
+
+                <tr>
+                    <td><strong>room_conflicts</strong></td>
+                    <td>Conflict Detection</td>
+                    <td>17.10ms</td>
+                    <td>16.44ms</td>
+                    <td class="speedup-low">1.0x</td>
+                    <td>-4.0%</td>
+                </tr>
+
+                <tr>
+                    <td><strong>top_rooms</strong></td>
+                    <td>Dashboard KPIs</td>
+                    <td>12.97ms</td>
+                    <td>11.47ms</td>
+                    <td class="speedup-low">0.9x</td>
+                    <td>-13.0%</td>
+                </tr>
+
+                <tr>
+                    <td><strong>split_count</strong></td>
+                    <td>Dashboard KPIs</td>
+                    <td>14.20ms</td>
+                    <td>10.69ms</td>
+                    <td class="speedup-low">0.8x</td>
+                    <td>-32.8%</td>
+                </tr>
+
+                <tr>
+                    <td><strong>room_distribution</strong></td>
+                    <td>Dashboard KPIs</td>
+                    <td>11.76ms</td>
+                    <td>8.49ms</td>
+                    <td class="speedup-low">0.7x</td>
+                    <td>-38.5%</td>
+                </tr>
+
+                <tr>
+                    <td><strong>merged_count</strong></td>
+                    <td>Dashboard KPIs</td>
+                    <td>14.15ms</td>
+                    <td>9.21ms</td>
+                    <td class="speedup-low">0.7x</td>
+                    <td>-53.6%</td>
+                </tr>
+
+                <tr>
+                    <td><strong>total_planned</strong></td>
+                    <td>Dashboard KPIs</td>
+                    <td>4.56ms</td>
+                    <td>2.83ms</td>
+                    <td class="speedup-low">0.6x</td>
+                    <td>-61.0%</td>
+                </tr>
+
+                <tr>
+                    <td><strong>personal_student_schedule</strong></td>
+                    <td>Student Interface</td>
+                    <td>2.23ms</td>
+                    <td>1.36ms</td>
+                    <td class="speedup-low">0.6x</td>
+                    <td>-63.9%</td>
+                </tr>
+
+                <tr>
+                    <td><strong>group_conflict_check</strong></td>
+                    <td>Scheduler Algorithm</td>
+                    <td>1.99ms</td>
+                    <td>0.85ms</td>
+                    <td class="speedup-low">0.4x</td>
+                    <td>-133.7%</td>
+                </tr>
+
+            </tbody>
+        </table>
+    </div>
+    
+</body>
+</html>

@@ -1,0 +1,327 @@
+{
+  "creneaux": {
+    "idx_creneaux_periode": {
+      "table": "creneaux",
+      "columns": [
+        {
+          "column": "id_periode",
+          "seq": 1
+        }
+      ],
+      "non_unique": 1,
+      "index_type": "BTREE"
+    }
+  },
+  "etudiants": {
+    "idx_etudiants_formation": {
+      "table": "etudiants",
+      "columns": [
+        {
+          "column": "id_formation",
+          "seq": 1
+        }
+      ],
+      "non_unique": 1,
+      "index_type": "BTREE"
+    },
+    "idx_etudiants_groupe": {
+      "table": "etudiants",
+      "columns": [
+        {
+          "column": "id_groupe",
+          "seq": 1
+        }
+      ],
+      "non_unique": 1,
+      "index_type": "BTREE"
+    }
+  },
+  "examens": {
+    "id_module": {
+      "table": "examens",
+      "columns": [
+        {
+          "column": "id_module",
+          "seq": 1
+        }
+      ],
+      "non_unique": 0,
+      "index_type": "BTREE"
+    },
+    "idx_examens_module": {
+      "table": "examens",
+      "columns": [
+        {
+          "column": "id_module",
+          "seq": 1
+        }
+      ],
+      "non_unique": 1,
+      "index_type": "BTREE"
+    }
+  },
+  "formations": {
+    "id_dept": {
+      "table": "formations",
+      "columns": [
+        {
+          "column": "id_dept",
+          "seq": 1
+        }
+      ],
+      "non_unique": 1,
+      "index_type": "BTREE"
+    }
+  },
+  "groupes": {
+    "code_groupe": {
+      "table": "groupes",
+      "columns": [
+        {
+          "column": "code_groupe",
+          "seq": 1
+        }
+      ],
+      "non_unique": 0,
+      "index_type": "BTREE"
+    },
+    "idx_groupes_formation": {
+      "table": "groupes",
+      "columns": [
+        {
+          "column": "id_formation",
+          "seq": 1
+        }
+      ],
+      "non_unique": 1,
+      "index_type": "BTREE"
+    }
+  },
+  "inscriptions": {
+    "idx_inscriptions_etudiant": {
+      "table": "inscriptions",
+      "columns": [
+        {
+          "column": "id_etudiant",
+          "seq": 1
+        }
+      ],
+      "non_unique": 1,
+      "index_type": "BTREE"
+    },
+    "idx_inscriptions_module": {
+      "table": "inscriptions",
+      "columns": [
+        {
+          "column": "id_module",
+          "seq": 1
+        }
+      ],
+      "non_unique": 1,
+      "index_type": "BTREE"
+    }
+  },
+  "lieux_examen": {
+    "idx_lieux_type": {
+      "table": "lieux_examen",
+      "columns": [
+        {
+          "column": "type",
+          "seq": 1
+        }
+      ],
+      "non_unique": 1,
+      "index_type": "BTREE"
+    }
+  },
+  "modules": {
+    "idx_modules_formation": {
+      "table": "modules",
+      "columns": [
+        {
+          "column": "id_formation",
+          "seq": 1
+        }
+      ],
+      "non_unique": 1,
+      "index_type": "BTREE"
+    }
+  },
+  "planning_examens": {
+    "id_creneau": {
+      "table": "planning_examens",
+      "columns": [
+        {
+          "column": "id_creneau",
+          "seq": 1
+        }
+      ],
+      "non_unique": 1,
+      "index_type": "BTREE"
+    },
+    "id_examen": {
+      "table": "planning_examens",
+      "columns": [
+        {
+          "column": "id_examen",
+          "seq": 1
+        }
+      ],
+      "non_unique": 1,
+      "index_type": "BTREE"
+    },
+    "id_lieu": {
+      "table": "planning_examens",
+      "columns": [
+        {
+          "column": "id_lieu",
+          "seq": 1
+        }
+      ],
+      "non_unique": 1,
+      "index_type": "BTREE"
+    },
+    "idx_planning_creneau": {
+      "table": "planning_examens",
+      "columns": [
+        {
+          "column": "id_creneau",
+          "seq": 1
+        }
+      ],
+      "non_unique": 1,
+      "index_type": "BTREE"
+    },
+    "idx_planning_examen": {
+      "table": "planning_examens",
+      "columns": [
+        {
+          "column": "id_examen",
+          "seq": 1
+        }
+      ],
+      "non_unique": 1,
+      "index_type": "BTREE"
+    }
+  },
+  "planning_groupes": {
+    "id_groupe": {
+      "table": "planning_groupes",
+      "columns": [
+        {
+          "column": "id_groupe",
+          "seq": 1
+        }
+      ],
+      "non_unique": 1,
+      "index_type": "BTREE"
+    },
+    "idx_split_part": {
+      "table": "planning_groupes",
+      "columns": [
+        {
+          "column": "split_part",
+          "seq": 1
+        }
+      ],
+      "non_unique": 1,
+      "index_type": "BTREE"
+    }
+  },
+  "professeurs": {
+    "id_dept": {
+      "table": "professeurs",
+      "columns": [
+        {
+          "column": "id_dept",
+          "seq": 1
+        }
+      ],
+      "non_unique": 1,
+      "index_type": "BTREE"
+    }
+  },
+  "roles": {
+    "nom_role": {
+      "table": "roles",
+      "columns": [
+        {
+          "column": "nom_role",
+          "seq": 1
+        }
+      ],
+      "non_unique": 0,
+      "index_type": "BTREE"
+    }
+  },
+  "surveillances": {
+    "id_planning": {
+      "table": "surveillances",
+      "columns": [
+        {
+          "column": "id_planning",
+          "seq": 1
+        }
+      ],
+      "non_unique": 1,
+      "index_type": "BTREE"
+    },
+    "idx_surveillances_prof": {
+      "table": "surveillances",
+      "columns": [
+        {
+          "column": "id_prof",
+          "seq": 1
+        }
+      ],
+      "non_unique": 1,
+      "index_type": "BTREE"
+    }
+  },
+  "users": {
+    "username": {
+      "table": "users",
+      "columns": [
+        {
+          "column": "username",
+          "seq": 1
+        }
+      ],
+      "non_unique": 0,
+      "index_type": "BTREE"
+    },
+    "id_etudiant": {
+      "table": "users",
+      "columns": [
+        {
+          "column": "id_etudiant",
+          "seq": 1
+        }
+      ],
+      "non_unique": 1,
+      "index_type": "BTREE"
+    },
+    "id_prof": {
+      "table": "users",
+      "columns": [
+        {
+          "column": "id_prof",
+          "seq": 1
+        }
+      ],
+      "non_unique": 1,
+      "index_type": "BTREE"
+    },
+    "id_role": {
+      "table": "users",
+      "columns": [
+        {
+          "column": "id_role",
+          "seq": 1
+        }
+      ],
+      "non_unique": 1,
+      "index_type": "BTREE"
+    }
+  }
+}

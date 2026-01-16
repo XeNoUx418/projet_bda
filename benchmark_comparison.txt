@@ -1,0 +1,85 @@
+================================================================================
+INDEX PERFORMANCE COMPARISON REPORT
+================================================================================
+
+Generated: 2026-01-15 22:39:25
+
+================================================================================
+OVERALL SUMMARY
+================================================================================
+
+With Indexes:
+  Average query time:      9.85ms
+  Total time:           187.09ms
+
+Without Indexes:
+  Average query time:      9.20ms
+  Total time:           174.79ms
+
+Overall Performance:
+  Indexes make queries 0.9x FASTER
+  Time saved per query: -0.65ms
+
+================================================================================
+TOP 10 IMPROVEMENTS FROM INDEXES
+================================================================================
+
+Query                          With       Without    Speedup    Improvement 
+--------------------------------------------------------------------------------
+departments                        0.85ms     1.48ms      1.7x       42.5%
+periods_with_planning              1.09ms     1.62ms      1.5x       32.6%
+formations                         1.44ms     1.92ms      1.3x       24.6%
+student_schedule                   3.33ms     4.31ms      1.3x       22.8%
+load_rooms                         0.62ms     0.81ms      1.3x       23.3%
+professor_schedule                 7.17ms     8.50ms      1.2x       15.7%
+load_slots                         1.05ms     1.21ms      1.1x       13.0%
+load_groups                        4.39ms     4.81ms      1.1x        8.7%
+prof_conflicts                    56.41ms    58.28ms      1.0x        3.2%
+load_exams                         8.26ms     8.02ms      1.0x       -3.0%
+
+================================================================================
+BREAKDOWN BY CATEGORY
+================================================================================
+
+Conflict Detection:
+  Average speedup: 1.0x
+  Queries: 2
+    prof_conflicts                    1.0x faster with indexes
+    room_conflicts                    1.0x faster with indexes
+
+Dashboard KPIs:
+  Average speedup: 0.8x
+  Queries: 6
+    professor_load                    1.0x faster with indexes
+    top_rooms                         0.9x faster with indexes
+    split_count                       0.8x faster with indexes
+    room_distribution                 0.7x faster with indexes
+    merged_count                      0.7x faster with indexes
+    total_planned                     0.6x faster with indexes
+
+Professor Interface:
+  Average speedup: 1.2x
+  Queries: 1
+    professor_schedule                1.2x faster with indexes
+
+Reference Data:
+  Average speedup: 1.5x
+  Queries: 3
+    departments                       1.7x faster with indexes
+    periods_with_planning             1.5x faster with indexes
+    formations                        1.3x faster with indexes
+
+Scheduler Algorithm:
+  Average speedup: 1.0x
+  Queries: 5
+    load_rooms                        1.3x faster with indexes
+    load_slots                        1.1x faster with indexes
+    load_groups                       1.1x faster with indexes
+    load_exams                        1.0x faster with indexes
+    group_conflict_check              0.4x faster with indexes
+
+Student Interface:
+  Average speedup: 1.0x
+  Queries: 2
+    student_schedule                  1.3x faster with indexes
+    personal_student_schedule         0.6x faster with indexes

@@ -1,0 +1,135 @@
+[
+  {
+    "TABLE_NAME": "creneaux",
+    "CONSTRAINT_NAME": "creneaux_ibfk_1",
+    "COLUMN_NAME": "id_periode",
+    "REFERENCED_TABLE_NAME": "periodes_examens",
+    "REFERENCED_COLUMN_NAME": "id_periode"
+  },
+  {
+    "TABLE_NAME": "etudiants",
+    "CONSTRAINT_NAME": "etudiants_ibfk_1",
+    "COLUMN_NAME": "id_formation",
+    "REFERENCED_TABLE_NAME": "formations",
+    "REFERENCED_COLUMN_NAME": "id_formation"
+  },
+  {
+    "TABLE_NAME": "examens",
+    "CONSTRAINT_NAME": "examens_ibfk_1",
+    "COLUMN_NAME": "id_module",
+    "REFERENCED_TABLE_NAME": "modules",
+    "REFERENCED_COLUMN_NAME": "id_module"
+  },
+  {
+    "TABLE_NAME": "formations",
+    "CONSTRAINT_NAME": "formations_ibfk_1",
+    "COLUMN_NAME": "id_dept",
+    "REFERENCED_TABLE_NAME": "departements",
+    "REFERENCED_COLUMN_NAME": "id_dept"
+  },
+  {
+    "TABLE_NAME": "groupes",
+    "CONSTRAINT_NAME": "groupes_ibfk_1",
+    "COLUMN_NAME": "id_formation",
+    "REFERENCED_TABLE_NAME": "formations",
+    "REFERENCED_COLUMN_NAME": "id_formation"
+  },
+  {
+    "TABLE_NAME": "inscriptions",
+    "CONSTRAINT_NAME": "inscriptions_ibfk_1",
+    "COLUMN_NAME": "id_etudiant",
+    "REFERENCED_TABLE_NAME": "etudiants",
+    "REFERENCED_COLUMN_NAME": "id_etudiant"
+  },
+  {
+    "TABLE_NAME": "inscriptions",
+    "CONSTRAINT_NAME": "inscriptions_ibfk_2",
+    "COLUMN_NAME": "id_module",
+    "REFERENCED_TABLE_NAME": "modules",
+    "REFERENCED_COLUMN_NAME": "id_module"
+  },
+  {
+    "TABLE_NAME": "modules",
+    "CONSTRAINT_NAME": "modules_ibfk_1",
+    "COLUMN_NAME": "id_formation",
+    "REFERENCED_TABLE_NAME": "formations",
+    "REFERENCED_COLUMN_NAME": "id_formation"
+  },
+  {
+    "TABLE_NAME": "planning_examens",
+    "CONSTRAINT_NAME": "planning_examens_ibfk_1",
+    "COLUMN_NAME": "id_examen",
+    "REFERENCED_TABLE_NAME": "examens",
+    "REFERENCED_COLUMN_NAME": "id_examen"
+  },
+  {
+    "TABLE_NAME": "planning_examens",
+    "CONSTRAINT_NAME": "planning_examens_ibfk_2",
+    "COLUMN_NAME": "id_creneau",
+    "REFERENCED_TABLE_NAME": "creneaux",
+    "REFERENCED_COLUMN_NAME": "id_creneau"
+  },
+  {
+    "TABLE_NAME": "planning_examens",
+    "CONSTRAINT_NAME": "planning_examens_ibfk_3",
+    "COLUMN_NAME": "id_lieu",
+    "REFERENCED_TABLE_NAME": "lieux_examen",
+    "REFERENCED_COLUMN_NAME": "id_lieu"
+  },
+  {
+    "TABLE_NAME": "planning_groupes",
+    "CONSTRAINT_NAME": "planning_groupes_ibfk_1",
+    "COLUMN_NAME": "id_planning",
+    "REFERENCED_TABLE_NAME": "planning_examens",
+    "REFERENCED_COLUMN_NAME": "id_planning"
+  },
+  {
+    "TABLE_NAME": "planning_groupes",
+    "CONSTRAINT_NAME": "planning_groupes_ibfk_2",
+    "COLUMN_NAME": "id_groupe",
+    "REFERENCED_TABLE_NAME": "groupes",
+    "REFERENCED_COLUMN_NAME": "id_groupe"
+  },
+  {
+    "TABLE_NAME": "professeurs",
+    "CONSTRAINT_NAME": "professeurs_ibfk_1",
+    "COLUMN_NAME": "id_dept",
+    "REFERENCED_TABLE_NAME": "departements",
+    "REFERENCED_COLUMN_NAME": "id_dept"
+  },
+  {
+    "TABLE_NAME": "surveillances",
+    "CONSTRAINT_NAME": "surveillances_ibfk_1",
+    "COLUMN_NAME": "id_prof",
+    "REFERENCED_TABLE_NAME": "professeurs",
+    "REFERENCED_COLUMN_NAME": "id_prof"
+  },
+  {
+    "TABLE_NAME": "surveillances",
+    "CONSTRAINT_NAME": "surveillances_ibfk_2",
+    "COLUMN_NAME": "id_planning",
+    "REFERENCED_TABLE_NAME": "planning_examens",
+    "REFERENCED_COLUMN_NAME": "id_planning"
+  },
+  {
+    "TABLE_NAME": "users",
+    "CONSTRAINT_NAME": "users_ibfk_1",
+    "COLUMN_NAME": "id_role",
+    "REFERENCED_TABLE_NAME": "roles",
+    "REFERENCED_COLUMN_NAME": "id_role"
+  },
+  {
+    "TABLE_NAME": "users",
+    "CONSTRAINT_NAME": "users_ibfk_2",
+    "COLUMN_NAME": "id_etudiant",
+    "REFERENCED_TABLE_NAME": "etudiants",
+    "REFERENCED_COLUMN_NAME": "id_etudiant"
+  },
+  {
+    "TABLE_NAME": "users",
+    "CONSTRAINT_NAME": "users_ibfk_3",
+    "COLUMN_NAME": "id_prof",
+    "REFERENCED_TABLE_NAME": "professeurs",
+    "REFERENCED_COLUMN_NAME": "id_prof"
+  }
+]
