@@ -1,17 +1,18 @@
 # Flask Web Framework
 Flask==3.0.3
-flask-cors==4.0.0
+flask-cors==4.0.1
+Werkzeug==3.0.1
 
 # Database - PostgreSQL
-psycopg2-binary==2.9.9
+psycopg2-binary==2.9.10
 
-# Data Processing - Compatible with Python 3.13
-pandas==2.2.0
+# Data Processing - Compatible versions
+pandas==2.2.3
 numpy==1.26.4
 
-# Utilities
-python-dateutil==2.8.2
+# Date/Time utilities
+python-dateutil==2.9.0
 pytz==2024.1
 
-# Production Server
-gunicorn==22.0.0
+# Production WSGI Server
+gunicorn==21.2.0
