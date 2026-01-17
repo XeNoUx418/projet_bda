@@ -25,6 +25,73 @@ def ok(data=None, **extra):
 def fail(message, code=400):
     return jsonify({"ok": False, "error": message}), code
 
+
+@app.route('/api/admin/init_database', methods=['POST'])
+def init_database():
+    """Initialize database with schema, procedures, and data"""
+    try:
+        import os
+        conn = get_conn()
+        cur = conn.cursor()
+        
+        # Get the base directory
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        
+        # 1. Load Schema (creates tables)
+        schema_path = os.path.join(base_dir, 'Database', 'schema_postgresql.sql')
+        print(f"Loading schema from: {schema_path}")
+        with open(schema_path, 'r', encoding='utf-8') as f:
+            schema_sql = f.read()
+            cur.execute(schema_sql)
+            conn.commit()
+            print("✅ Schema loaded")
+        
+        # 2. Load Procedures (creates functions)
+        procedures_path = os.path.join(base_dir, 'Database', 'procedures_postgresql.sql')
+        print(f"Loading procedures from: {procedures_path}")
+        with open(procedures_path, 'r', encoding='utf-8') as f:
+            procedures_sql = f.read()
+            cur.execute(procedures_sql)
+            conn.commit()
+            print("✅ Procedures loaded")
+        
+        # 3. Load Data (inserts all data)
+        data_path = os.path.join(base_dir, 'Database', 'data_postgresql.sql')
+        print(f"Loading data from: {data_path}")
+        with open(data_path, 'r', encoding='utf-8') as f:
+            data_sql = f.read()
+            cur.execute(data_sql)
+            conn.commit()
+            print("✅ Data loaded")
+        
+        cur.close()
+        conn.close()
+        
+        return jsonify({
+            "ok": True, 
+            "message": "Database initialized successfully",
+            "details": {
+                "schema": "loaded",
+                "procedures": "loaded",
+                "data": "loaded"
+            }
+        })
+        
+    except FileNotFoundError as e:
+        return jsonify({
+            "ok": False, 
+            "error": f"SQL file not found: {str(e)}"
+        }), 404
+        
+    except Exception as e:
+        import traceback
+        return jsonify({
+            "ok": False, 
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        }), 500
+
+
 @app.get("/api/health")
 def health():
     return ok({"status": "up"})
