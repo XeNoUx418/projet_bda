@@ -6,7 +6,7 @@ import os
 
 # Database configuration from environment variables
 DB_CONFIG = {
-    "host": os.environ.get("PGHOST", "localhost"),
+    "host": os.environ.get("PGHOST"),
     "port": int(os.environ.get("PGPORT", 5432)),
     "user": os.environ.get("PGUSER", "postgres"),
     "password": os.environ.get("PGPASSWORD", ""),
