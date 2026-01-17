@@ -601,5 +601,21 @@ def dash_prof_conflicts():
 
     return ok(df.to_dict(orient="records"))
 
+
+@app.route('/')
+def index():
+    """Serve homepage"""
+    return send_from_directory('frontend', 'index.html')
+
+@app.route('/pages/<path:filename>')
+def serve_pages(filename):
+    """Serve HTML pages"""
+    return send_from_directory('frontend/pages', filename)
+
+@app.route('/assets/<path:path>')
+def serve_assets(path):
+    """Serve CSS/JS files"""
+    return send_from_directory('frontend/assets', path)
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=PORT, debug=DEBUG)
