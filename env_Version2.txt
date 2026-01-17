@@ -1,9 +1,5 @@
-# Local Development
-PGHOST=localhost
+PGHOST=dpg-d5m16isoud1c7392ekr0-a.frankfurt-postgres.render.com
 PGPORT=5432
-PGUSER=postgres
-PGPASSWORD=your_password
-PGDATABASE=exam_timetabling
-DEBUG=False
-FLASK_ENV=development
-PORT=5000
+PGUSER=bda_user
+PGPASSWORD=vnrGTEe3alm2PN9ykO0MuFs0ArgomSND
+PGDATABASE=projet_bda_zo94
