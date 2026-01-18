@@ -378,9 +378,9 @@ def generate_planning(pid: int):
     start = time.time()
     
     # Get the absolute path to generate_assign.py (one level up from api/)
-    script_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    script_dir = os.path.dirname(os.path.abspath(__file__))
     script_path = os.path.join(script_dir, "generate_assign.py")
-    
+
     if not os.path.exists(script_path):
         return fail(f"Script not found at {script_path}", 500)
     
