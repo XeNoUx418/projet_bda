@@ -374,16 +374,16 @@ def create_periode():
 
 @app.post("/api/periodes/<int:pid>/generate_planning")
 def generate_planning(pid: int):
-    # Run generate_assign.py with correct path resolution
     start = time.time()
-    
-    # Get the absolute path to generate_assign.py (one level up from api/)
+
     script_dir = os.path.dirname(os.path.abspath(__file__))
     script_path = os.path.join(script_dir, "generate_assign.py")
 
+    print("DEBUG script_path:", script_path)
+
     if not os.path.exists(script_path):
         return fail(f"Script not found at {script_path}", 500)
-    
+
     try:
         result = subprocess.run(
             [sys.executable, script_path, str(pid)],
@@ -394,9 +394,8 @@ def generate_planning(pid: int):
         elapsed = time.time() - start
 
         if result.returncode != 0:
-            return fail(result.stderr or "Generation failed", 500)
+            return fail(result.stderr or result.stdout or "Generation failed", 500)
 
-        # Update generation time in database
         conn = get_conn()
         try:
             cur = conn.cursor()
@@ -410,11 +409,17 @@ def generate_planning(pid: int):
         finally:
             conn.close()
 
-        return ok({"period_id": pid, "elapsed_seconds": round(elapsed, 2), "logs": result.stdout})
+        return ok({
+            "period_id": pid,
+            "elapsed_seconds": round(elapsed, 2),
+            "logs": result.stdout
+        })
+
     except subprocess.TimeoutExpired:
         return fail("Generation script timed out (max 5 minutes)", 500)
     except Exception as e:
         return fail(f"Generation error: {str(e)}", 500)
+
 
 @app.delete("/api/periodes/<int:pid>/planning")
 def delete_planning(pid: int):
