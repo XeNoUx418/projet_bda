@@ -379,27 +379,25 @@ class ExamScheduler:
                         print(f"  [SKIP] Exam {exam['id_examen']} (no slot)")
                         continue
 
-                    # Determine room type ONCE for the entire exam
-                    global_room_type = "amphi" if any(p["type"] == "amphi" for p in packs) else "salle"
-                    
-                    # Pick professors ONCE per exam+slot
-                    shared_profs = self.pick_professors(
-                        exam_dept=exam["id_dept"],
-                        room_type=global_room_type,
-                        exam_date=slot["date"],
-                        slot_time=slot["heure_debut"],
-                        exam_id=exam["id_examen"]
-                    )
-                    
-                    if not shared_profs:
-                        print(f"  [SKIP] Exam {exam['id_examen']} (no professors available)")
-                        continue
-
-                    # Now assign rooms and create planning entries
+                    # Now assign rooms and professors for EACH PACK separately
                     for pack in packs:
                         room = self.assign_room(pack)
                         if not room:
                             print(f"  [SKIP] No room for pack")
+                            continue
+
+                        # ✅ FIX: Pick professors PER PACK (not per exam)
+                        # Each pack is a separate physical location that needs supervision
+                        pack_profs = self.pick_professors(
+                            exam_dept=exam["id_dept"],
+                            room_type=pack["type"],  # Use pack's room type, not global
+                            exam_date=slot["date"],
+                            slot_time=slot["heure_debut"],
+                            exam_id=exam["id_examen"]
+                        )
+                        
+                        if not pack_profs:
+                            print(f"  [SKIP] Pack (no professors available)")
                             continue
 
                         # ✅ PostgreSQL: Use RETURNING to get id_planning
@@ -411,8 +409,8 @@ class ExamScheduler:
 
                         planning_id = self.cursor.fetchone()["id_planning"]
 
-                        # ✅ Batch: Collect surveillance data
-                        for pid in shared_profs:
+                        # ✅ Batch: Collect surveillance data (pack-specific professors)
+                        for pid in pack_profs:
                             surveillance_batch.append((pid, planning_id))
 
                         # Handle merged/split group labels
@@ -453,6 +451,71 @@ class ExamScheduler:
 
         self.conn.commit()
         print("[SUCCESS] Planning generation completed")
+        
+        # ✅ VERIFICATION: Check for surveillance conflicts
+        print("\n[VERIFICATION] Checking for surveillance conflicts...")
+        self.verify_no_conflicts()
+
+    def verify_no_conflicts(self):
+        """
+        Verify that no professor is assigned to multiple exams at the same time
+        """
+        self.cursor.execute("""
+            SELECT 
+                p.nom AS professor,
+                c.date,
+                TO_CHAR(c.heure_debut, 'HH24:MI') AS time,
+                COUNT(DISTINCT pe.id_examen) AS exam_count,
+                STRING_AGG(DISTINCT le.nom, ', ') AS rooms
+            FROM surveillances s
+            JOIN professeurs p ON p.id_prof = s.id_prof
+            JOIN planning_examens pe ON pe.id_planning = s.id_planning
+            JOIN creneaux c ON c.id_creneau = pe.id_creneau
+            JOIN lieux_examen le ON le.id_lieu = pe.id_lieu
+            WHERE c.id_periode = %s
+            GROUP BY p.id_prof, p.nom, c.date, c.heure_debut
+            HAVING COUNT(DISTINCT pe.id_examen) > 1
+            ORDER BY c.date, c.heure_debut, p.nom
+        """, (self.period_id,))
+        
+        conflicts = self.cursor.fetchall()
+        
+        if conflicts:
+            print(f"⚠️  WARNING: Found {len(conflicts)} time slot conflicts:")
+            for conf in conflicts[:10]:  # Show first 10
+                print(f"  - {conf['professor']} on {conf['date']} at {conf['time']}: "
+                      f"{conf['exam_count']} exams in rooms: {conf['rooms']}")
+            if len(conflicts) > 10:
+                print(f"  ... and {len(conflicts) - 10} more conflicts")
+        else:
+            print("✅ No time slot conflicts detected")
+        
+        # Check daily limits
+        self.cursor.execute("""
+            SELECT 
+                p.nom AS professor,
+                c.date,
+                COUNT(DISTINCT s.id_planning) AS daily_count
+            FROM surveillances s
+            JOIN professeurs p ON p.id_prof = s.id_prof
+            JOIN planning_examens pe ON pe.id_planning = s.id_planning
+            JOIN creneaux c ON c.id_creneau = pe.id_creneau
+            WHERE c.id_periode = %s
+            GROUP BY p.id_prof, p.nom, c.date
+            HAVING COUNT(DISTINCT s.id_planning) > 3
+            ORDER BY daily_count DESC, c.date
+        """, (self.period_id,))
+        
+        overloaded = self.cursor.fetchall()
+        
+        if overloaded:
+            print(f"⚠️  WARNING: Found {len(overloaded)} days with >3 surveillances:")
+            for over in overloaded[:10]:  # Show first 10
+                print(f"  - {over['professor']} on {over['date']}: {over['daily_count']} surveillances")
+            if len(overloaded) > 10:
+                print(f"  ... and {len(overloaded) - 10} more overloaded days")
+        else:
+            print("✅ No daily limit violations detected")
 
     def close(self):
         self.cursor.close()
