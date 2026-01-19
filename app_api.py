@@ -161,18 +161,18 @@ def schedule():
 
     df = query_df("""
         SELECT
-            c.date                                   AS exam_date,
-            TO_CHAR(c.date, 'Day, Month DD')         AS DateLabel,
-            TO_CHAR(c.heure_debut, 'HH24:MI')        AS Start,
-            TO_CHAR(c.heure_fin, 'HH24:MI')          AS End,
-            m.nom                                    AS Module,
-            e.duree_minutes                          AS Duration,
-            le.nom                                   AS Room,
-            le.type                                  AS Type,
-            le.batiment                              AS Building,
-            g.code_groupe                            AS GroupCode,
-            pg.split_part                            AS SplitPart,
-            pg.merged_groups                         AS MergedGroups
+            c.date                                   AS "exam_date",
+            TO_CHAR(c.date, 'Day, Month DD')         AS "DateLabel",
+            TO_CHAR(c.heure_debut, 'HH24:MI')        AS "Start",
+            TO_CHAR(c.heure_fin, 'HH24:MI')          AS "End",
+            m.nom                                    AS "Module",
+            e.duree_minutes                          AS "Duration",
+            le.nom                                   AS "Room",
+            le.type                                  AS "Type",
+            le.batiment                              AS "Building",
+            g.code_groupe                            AS "GroupCode",
+            pg.split_part                            AS "SplitPart",
+            pg.merged_groups                         AS "MergedGroups"
         FROM planning_examens pe
         JOIN examens e           ON e.id_examen = pe.id_examen
         JOIN modules m           ON m.id_module = e.id_module
