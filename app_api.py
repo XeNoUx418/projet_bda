@@ -292,7 +292,7 @@ def prof_schedule():
         return fail("prof_id, date_start, date_end are required (YYYY-MM-DD)")
 
     df = query_df("""
-        SELECT
+        SELECT DISTINCT ON (pe.id_planning)
             pe.id_planning,
             c.date                                   AS exam_date,
             TO_CHAR(c.date, 'FMDay, FMMonth DD')     AS "DateLabel",
@@ -320,8 +320,7 @@ def prof_schedule():
         JOIN groupes g           ON g.id_groupe = pg.id_groupe
         WHERE s.id_prof = %s
           AND c.date BETWEEN %s AND %s
-        GROUP BY pe.id_planning, c.date, c.heure_debut, c.heure_fin, m.nom, e.duree_minutes, le.nom, le.type, le.batiment, pg.merged_groups, g.code_groupe, pg.split_part
-        ORDER BY c.date, c.heure_debut
+        ORDER BY pe.id_planning, c.date, c.heure_debut
     """, params=[prof_id, date_start, date_end])
 
     return ok(df.to_dict(orient="records"))
@@ -506,16 +505,16 @@ def dash_kpis():
             SELECT COUNT(DISTINCT pe.id_planning) AS n
             FROM planning_examens pe
             JOIN creneaux c ON pe.id_creneau = c.id_creneau
-            WHERE (%s IS NULL OR c.id_periode = %s)
-        """, params=[periode_id, periode_id]).iloc[0]["n"]
+            WHERE c.id_periode = %s
+        """, params=[periode_id]).iloc[0]["n"]
 
         expected_data = query_df("""
             SELECT 
-                SUM(CASE WHEN f.nom LIKE 'Licence%' THEN 4 ELSE 3 END) as expected
+                COALESCE(SUM(CASE WHEN f.nom LIKE 'Licence%%' THEN 4 ELSE 3 END), 0) as expected
             FROM modules m
             JOIN formations f ON m.id_formation = f.id_formation
-        """)
-        expected_slots = int(expected_data.iloc[0]["expected"])
+        """, params=[])
+        expected_slots = int(expected_data.iloc[0]["expected"] or 0)
 
         merged_count = query_df("""
             SELECT COUNT(DISTINCT pg.id_planning) AS n
@@ -523,8 +522,8 @@ def dash_kpis():
             JOIN planning_examens pe ON pe.id_planning = pg.id_planning
             JOIN creneaux c ON pe.id_creneau = c.id_creneau
             WHERE pg.merged_groups IS NOT NULL
-            AND (%s IS NULL OR c.id_periode = %s)
-        """, params=[periode_id, periode_id]).iloc[0]["n"]
+            AND c.id_periode = %s
+        """, params=[periode_id]).iloc[0]["n"]
 
         split_count = query_df("""
             SELECT COUNT(DISTINCT pg.id_planning) AS n
@@ -532,17 +531,17 @@ def dash_kpis():
             JOIN planning_examens pe ON pe.id_planning = pg.id_planning
             JOIN creneaux c ON pe.id_creneau = c.id_creneau
             WHERE pg.split_part IS NOT NULL
-            AND (%s IS NULL OR c.id_periode = %s)
-        """, params=[periode_id, periode_id]).iloc[0]["n"]
+            AND c.id_periode = %s
+        """, params=[periode_id]).iloc[0]["n"]
 
     else:
-        total_planned = query_df("SELECT COUNT(*) as n FROM planning_examens").iloc[0]["n"]
-        merged_count = query_df("SELECT COUNT(DISTINCT id_planning) as n FROM planning_groupes WHERE merged_groups IS NOT NULL").iloc[0]["n"]
-        split_count = query_df("SELECT COUNT(DISTINCT id_groupe) as n FROM planning_groupes WHERE split_part IS NOT NULL").iloc[0]["n"]
+        total_planned = query_df("SELECT COUNT(*) as n FROM planning_examens", params=[]).iloc[0]["n"]
+        merged_count = query_df("SELECT COUNT(DISTINCT id_planning) as n FROM planning_groupes WHERE merged_groups IS NOT NULL", params=[]).iloc[0]["n"]
+        split_count = query_df("SELECT COUNT(DISTINCT id_groupe) as n FROM planning_groupes WHERE split_part IS NOT NULL", params=[]).iloc[0]["n"]
         expected_slots = 0
 
-    total_profs = query_df("SELECT COUNT(*) as n FROM professeurs").iloc[0]["n"]
-    total_students = query_df("SELECT COUNT(*) as n FROM etudiants").iloc[0]["n"]
+    total_profs = query_df("SELECT COUNT(*) as n FROM professeurs", params=[]).iloc[0]["n"]
+    total_students = query_df("SELECT COUNT(*) as n FROM etudiants", params=[]).iloc[0]["n"]
     
     return ok({
         "total_planned": int(total_planned),
