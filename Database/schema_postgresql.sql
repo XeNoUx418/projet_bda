@@ -223,3 +223,51 @@ CREATE INDEX idx_lieux_type ON lieux_examen(type);
 
 -- Index for planning_groupes
 CREATE INDEX idx_split_part ON planning_groupes(split_part);
+
+-- Index for planning_examens lookups (CRITICAL)
+CREATE INDEX IF NOT EXISTS idx_pe_creneau_planning
+ON planning_examens (id_creneau, id_planning);
+
+-- Index for planning_groupes lookups (CRITICAL)
+CREATE INDEX IF NOT EXISTS idx_pg_planning
+ON planning_groupes (id_planning);
+
+-- Composite index for group conflict checks (CRITICAL)
+CREATE INDEX IF NOT EXISTS idx_pg_groupe_planning
+ON planning_groupes (id_groupe, id_planning);
+
+-- Index for surveillances lookups (CRITICAL)
+CREATE INDEX IF NOT EXISTS idx_surv_planning_prof
+ON surveillances (id_planning, id_prof);
+
+-- Composite index for creneaux by period (CRITICAL)
+CREATE INDEX IF NOT EXISTS idx_creneaux_periode_creneau
+ON creneaux (id_periode, id_creneau);
+
+-- Index for date lookups in creneaux
+CREATE INDEX IF NOT EXISTS idx_creneaux_date
+ON creneaux (date);
+
+-- ============================================
+-- INDEXES FOR DASHBOARD QUERIES
+-- ============================================
+
+-- Index for dashboard KPI queries
+CREATE INDEX IF NOT EXISTS idx_pe_examen
+ON planning_examens (id_examen);
+
+-- Index for professor conflicts dashboard
+CREATE INDEX IF NOT EXISTS idx_surv_prof
+ON surveillances (id_prof);
+
+-- ============================================
+-- INDEXES FOR STUDENT/PROFESSOR SCHEDULES
+-- ============================================
+
+-- Index for student schedule queries
+CREATE INDEX IF NOT EXISTS idx_etudiants_groupe_formation
+ON etudiants (id_groupe, id_formation);
+
+-- Composite index for planning_examens with all joins
+CREATE INDEX IF NOT EXISTS idx_pe_composite
+ON planning_examens (id_examen, id_creneau, id_lieu);
