@@ -148,9 +148,9 @@ def sessions():
     return ok(df.to_dict(orient="records"))
 
 # -------------------------
-# Student schedule - CRITICAL FIX
+# Student schedule - FIXED FOR POSTGRESQL
 # -------------------------
-@app.get("/api/schedule")
+@app.route("/api/schedule")
 def schedule():
     formation_id = request.args.get("formation_id", type=int)
     annee = request.args.get("annee", type=str)
@@ -159,10 +159,11 @@ def schedule():
     if not formation_id or not annee or not periode_id:
         return fail("formation_id, annee, periode_id are required")
 
+    # PostgreSQL compatible query with quoted aliases to preserve case
     df = query_df("""
         SELECT
-            c.date                                   AS "exam_date",
-            TO_CHAR(c.date, 'Day, Month DD')         AS "DateLabel",
+            c.date                                   AS exam_date,
+            TO_CHAR(c.date, 'FMDay, FMMonth DD')     AS "DateLabel",
             TO_CHAR(c.heure_debut, 'HH24:MI')        AS "Start",
             TO_CHAR(c.heure_fin, 'HH24:MI')          AS "End",
             m.nom                                    AS "Module",
@@ -192,23 +193,22 @@ def schedule():
     groups = {}
 
     for r in rows:
-        # FIXED: Use .get() instead of direct access for NULL safety
+        # 1. Determine the Group Key & Label
+        #    Use .get() for safety, though keys should exist now
         merged_groups = r.get("MergedGroups")
         split_part = r.get("SplitPart")
-        group_code = r.get("GroupCode", "")
-        
+        group_code = r.get("GroupCode")
+
         if merged_groups:
-            # MERGED CASE
+            # MERGED CASE (e.g. "G1+G2")
             key = merged_groups
             label = merged_groups.replace("+", " + ")
             group_type = "merged"
-
         elif split_part:
             # SPLIT CASE
             key = f"{group_code}_{split_part}"
             label = f"{group_code} (Part {split_part})"
             group_type = "split"
-
         else:
             # NORMAL CASE
             key = group_code
@@ -222,36 +222,42 @@ def schedule():
                 "exams": []
             }
 
-        # CRITICAL: avoid duplicates for merged exams
-        # FIXED: Convert date object to string for comparison
-        exam_date = r.get("exam_date")
-        if hasattr(exam_date, 'isoformat'):
-            exam_date_str = exam_date.isoformat()
+        # 2. Prepare Data for Comparison & Insertion
+        #    Convert date/time objects to strings if they aren't already
+        #    (TO_CHAR usually returns strings, but 'exam_date' is raw date)
+        
+        raw_date = r.get("exam_date")
+        if hasattr(raw_date, 'isoformat'):
+            date_str = raw_date.isoformat()
         else:
-            exam_date_str = str(exam_date) if exam_date else None
-            
-        exam_signature = (
+            date_str = str(raw_date) if raw_date else ""
+
+        # 3. DEDUPLICATION LOGIC
+        #    We check if an exam with the same Module, Date, Start, End, Room
+        #    already exists in this specific group's list.
+        
+        current_exam_signature = (
             r.get("Module"),
-            exam_date_str,
+            date_str,
             r.get("Start"),
             r.get("End"),
             r.get("Room")
         )
 
-        existing = {
+        existing_signatures = {
             (
-                e.get("module"),
-                e.get("date"),
-                e.get("start"),
-                e.get("end"),
-                e.get("room")
+                e["module"],
+                e["date"],
+                e["start"],
+                e["end"],
+                e["room"]
             )
             for e in groups[key]["exams"]
         }
 
-        if exam_signature not in existing:
+        if current_exam_signature not in existing_signatures:
             groups[key]["exams"].append({
-                "date": exam_date_str,  # FIXED: Use converted string
+                "date": date_str,
                 "dateLabel": r.get("DateLabel", ""),
                 "start": r.get("Start", ""),
                 "end": r.get("End", ""),
@@ -260,6 +266,7 @@ def schedule():
                 "building": r.get("Building", ""),
                 "type": r.get("Type", "")
             })
+
     return ok(groups)
 
 
@@ -288,21 +295,21 @@ def prof_schedule():
         SELECT
             pe.id_planning,
             c.date                                   AS exam_date,
-            TO_CHAR(c.date, 'Day, Month DD')         AS DateLabel,
-            TO_CHAR(c.heure_debut, 'HH24:MI')        AS Start,
-            TO_CHAR(c.heure_fin, 'HH24:MI')          AS End,
-            m.nom                                    AS Module,
-            e.duree_minutes                          AS Duration,
-            le.nom                                   AS Room,
-            le.type                                  AS Type,
-            le.batiment                              AS Building,
+            TO_CHAR(c.date, 'FMDay, FMMonth DD')     AS "DateLabel",
+            TO_CHAR(c.heure_debut, 'HH24:MI')        AS "Start",
+            TO_CHAR(c.heure_fin, 'HH24:MI')          AS "End",
+            m.nom                                    AS "Module",
+            e.duree_minutes                          AS "Duration",
+            le.nom                                   AS "Room",
+            le.type                                  AS "Type",
+            le.batiment                              AS "Building",
             COALESCE(
                 pg.merged_groups,
                 CASE
                     WHEN pg.split_part IS NULL THEN g.code_groupe
                     ELSE g.code_groupe || ' (Part ' || pg.split_part || ')'
                 END
-            ) AS GroupLabel
+            ) AS "GroupLabel"
         FROM surveillances s
         JOIN planning_examens pe ON pe.id_planning = s.id_planning
         JOIN creneaux c          ON c.id_creneau = pe.id_creneau
@@ -409,11 +416,11 @@ def preview(pid: int):
     limit = request.args.get("limit", default=100, type=int)
     df = query_df("""
         SELECT
-            c.date AS Date,
-            TO_CHAR(c.heure_debut, 'HH24:MI') AS Start,
-            TO_CHAR(c.heure_fin, 'HH24:MI') AS End,
-            m.nom AS Module,
-            le.nom AS Room
+            c.date AS "Date",
+            TO_CHAR(c.heure_debut, 'HH24:MI') AS "Start",
+            TO_CHAR(c.heure_fin, 'HH24:MI') AS "End",
+            m.nom AS "Module",
+            le.nom AS "Room"
         FROM planning_examens pe
         JOIN examens e       ON e.id_examen = pe.id_examen
         JOIN modules m       ON m.id_module = e.id_module
@@ -429,10 +436,10 @@ def preview(pid: int):
 def room_conflicts(pid: int):
     df = query_df("""
         SELECT
-            le.nom AS Room,
+            le.nom AS "Room",
             c.date,
-            TO_CHAR(c.heure_debut, 'HH24:MI') AS Start,
-            COUNT(*) AS Exams
+            TO_CHAR(c.heure_debut, 'HH24:MI') AS "Start",
+            COUNT(*) AS "Exams"
         FROM planning_examens pe
         JOIN lieux_examen le ON le.id_lieu = pe.id_lieu
         JOIN creneaux c      ON c.id_creneau = pe.id_creneau
@@ -454,17 +461,17 @@ def student_schedule():
     df = query_df("""
         SELECT
             c.date                                   AS exam_date,
-            TO_CHAR(c.date, 'Day, Month DD')         AS DateLabel,
-            TO_CHAR(c.heure_debut, 'HH24:MI')        AS Start,
-            TO_CHAR(c.heure_fin, 'HH24:MI')          AS End,
-            m.nom                                    AS Module,
-            e.duree_minutes                          AS Duration,
-            le.nom                                   AS Room,
-            le.type                                  AS Type,
-            le.batiment                              AS Building,
-            g.code_groupe                            AS GroupCode,
-            pg.split_part                            AS SplitPart,
-            pg.merged_groups                         AS MergedGroups
+            TO_CHAR(c.date, 'FMDay, FMMonth DD')     AS "DateLabel",
+            TO_CHAR(c.heure_debut, 'HH24:MI')        AS "Start",
+            TO_CHAR(c.heure_fin, 'HH24:MI')          AS "End",
+            m.nom                                    AS "Module",
+            e.duree_minutes                          AS "Duration",
+            le.nom                                   AS "Room",
+            le.type                                  AS "Type",
+            le.batiment                              AS "Building",
+            g.code_groupe                            AS "GroupCode",
+            pg.split_part                            AS "SplitPart",
+            pg.merged_groups                         AS "MergedGroups"
         FROM etudiants et
         JOIN groupes g ON g.id_groupe = et.id_groupe
         JOIN planning_groupes pg ON pg.id_groupe = g.id_groupe
@@ -595,7 +602,7 @@ def dash_prof_load():
     periode_id = request.args.get("periode_id", type=int)
     if periode_id:
         df = query_df("""
-            SELECT p.nom, d.nom as Dept, COUNT(s.id_planning) as total_surveillances
+            SELECT p.nom, d.nom as "Dept", COUNT(s.id_planning) as total_surveillances
             FROM professeurs p
             JOIN departements d ON p.id_dept = d.id_dept
             LEFT JOIN surveillances s ON p.id_prof = s.id_prof
@@ -607,7 +614,7 @@ def dash_prof_load():
         """, params=[periode_id])
     else:
         df = query_df("""
-            SELECT p.nom, d.nom as Dept, COUNT(s.id_planning) as total_surveillances
+            SELECT p.nom, d.nom as "Dept", COUNT(s.id_planning) as total_surveillances
             FROM professeurs p
             JOIN departements d ON p.id_dept = d.id_dept
             LEFT JOIN surveillances s ON p.id_prof = s.id_prof
@@ -622,14 +629,14 @@ def dash_prof_conflicts():
 
     df = query_df("""
         SELECT
-            p.nom AS Professor,
+            p.nom AS "Professor",
             c.date,
-            TO_CHAR(c.heure_debut, 'HH24:MI') AS Start,
-            COUNT(DISTINCT pe.id_examen) AS Assignments,
+            TO_CHAR(c.heure_debut, 'HH24:MI') AS "Start",
+            COUNT(DISTINCT pe.id_examen) AS "Assignments",
             STRING_AGG(
                 DISTINCT m.nom || ' — ' || le.nom || ' (' || le.type || ')',
                 '<br>'
-            ) AS Details
+            ) AS "Details"
         FROM surveillances s
         JOIN professeurs p ON p.id_prof = s.id_prof
         JOIN planning_examens pe ON pe.id_planning = s.id_planning
