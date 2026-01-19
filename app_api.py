@@ -398,17 +398,16 @@ def generate_planning(pid: int):
 def delete_planning(pid: int):
     """
     ✅ OPTIMIZED: PostgreSQL-optimized bulk delete
-    Deletes planning data and optionally the period itself
+    Deletes ALL planning data, creneaux, AND the period itself
+    (Matches old MySQL stored procedure behavior)
     """
-    # Get optional query parameter to delete period too
-    delete_period = request.args.get("delete_period", "false").lower() == "true"
-    
     conn = get_conn()
     try:
         cur = conn.cursor()
         
-        # ✅ PostgreSQL-optimized: DELETE ... USING is much faster
-        # Delete surveillances first (foreign key constraint)
+        # ✅ PostgreSQL-optimized: DELETE ... USING is much faster than subqueries
+        
+        # 1. Delete surveillances
         cur.execute("""
             DELETE FROM surveillances s
             USING planning_examens pe, creneaux c
@@ -417,7 +416,7 @@ def delete_planning(pid: int):
             AND c.id_periode = %s
         """, (pid,))
         
-        # Delete planning_groupes
+        # 2. Delete planning_groupes
         cur.execute("""
             DELETE FROM planning_groupes pg
             USING planning_examens pe, creneaux c
@@ -426,7 +425,7 @@ def delete_planning(pid: int):
             AND c.id_periode = %s
         """, (pid,))
         
-        # Delete planning_examens
+        # 3. Delete planning_examens
         cur.execute("""
             DELETE FROM planning_examens pe
             USING creneaux c
@@ -434,24 +433,20 @@ def delete_planning(pid: int):
             AND c.id_periode = %s
         """, (pid,))
         
-        # Optionally delete the period and its creneaux
-        if delete_period:
-            # Delete creneaux
-            cur.execute("""
-                DELETE FROM creneaux
-                WHERE id_periode = %s
-            """, (pid,))
-            
-            # Delete period
-            cur.execute("""
-                DELETE FROM periodes_examens
-                WHERE id_periode = %s
-            """, (pid,))
+        # 4. Delete creneaux
+        cur.execute("""
+            DELETE FROM creneaux
+            WHERE id_periode = %s
+        """, (pid,))
+        
+        # 5. Delete the period itself
+        cur.execute("""
+            DELETE FROM periodes_examens
+            WHERE id_periode = %s
+        """, (pid,))
         
         conn.commit()
-        
-        message = "Planning and period deleted successfully" if delete_period else "Planning deleted successfully"
-        return ok({"deleted_period": pid, "period_removed": delete_period, "message": message})
+        return ok({"deleted_period": pid, "message": "Period and all planning data deleted successfully"})
     except Exception as e:
         conn.rollback()
         return fail(f"Delete error: {str(e)}", 500)
