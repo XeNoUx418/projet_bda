@@ -271,13 +271,25 @@ class ExamScheduler:
 
     def pick_professors(self, exam_dept, room_type, exam_date, slot_time, exam_id):
         """
-        Select professors for an exam session (ONCE per exam+slot).
+        Select professors for an exam session (ONCE per pack).
         Returns list of professor IDs and updates counters.
         
         CRITICAL: Checks that professors are not already assigned at this time slot.
         """
         needed = self.required_surveillants(room_type)
         selected = []
+        
+        # Convert slot_time to string for consistent comparison
+        if hasattr(slot_time, 'strftime'):
+            slot_time_str = slot_time.strftime('%H:%M')
+        else:
+            slot_time_str = str(slot_time)
+        
+        # Convert exam_date to string for consistent comparison
+        if hasattr(exam_date, 'isoformat'):
+            exam_date_str = exam_date.isoformat()
+        else:
+            exam_date_str = str(exam_date)
 
         # 1️⃣ Priority: same department
         priority = self.profs_by_dept.get(exam_dept, [])
@@ -294,17 +306,22 @@ class ExamScheduler:
             key=lambda p: self.prof_total[p["id_prof"]]
         )
 
+        # Debug tracking
+        skipped_busy = 0
+        skipped_daily_limit = 0
+
         for prof in candidates:
             pid = prof["id_prof"]
 
             # ✅ CRITICAL CHECK: Is this professor already assigned at this time slot?
-            slot_key = (exam_date, slot_time)
+            slot_key = (exam_date_str, slot_time_str)
             if slot_key in self.prof_slot_assignments[pid]:
-                # Professor is already supervising another exam at this time
-                continue
+                skipped_busy += 1
+                continue  # Professor is already supervising another exam at this time
 
             # Max 3 exams per day
-            if self.prof_daily[pid][exam_date] >= 3:
+            if self.prof_daily[pid][exam_date_str] >= 3:
+                skipped_daily_limit += 1
                 continue
 
             selected.append(pid)
@@ -314,15 +331,17 @@ class ExamScheduler:
 
         # Update counters ONCE for all selected professors
         for pid in selected:
-            self.prof_daily[pid][exam_date] += 1
+            self.prof_daily[pid][exam_date_str] += 1
             self.prof_total[pid] += 1
             
-            # ✅ Mark this professor as assigned to this time slot
-            slot_key = (exam_date, slot_time)
+            # ✅ Mark this professor as assigned to this time slot (using string keys)
+            slot_key = (exam_date_str, slot_time_str)
             self.prof_slot_assignments[pid][slot_key] = exam_id
 
         if len(selected) < needed:
-            print(f"[WARNING] Could only assign {len(selected)}/{needed} professors for exam {exam_id}")
+            print(f"[WARNING] Exam {exam_id} ({room_type}): Only {len(selected)}/{needed} professors")
+            print(f"          Skipped: {skipped_busy} busy, {skipped_daily_limit} daily limit")
+            print(f"          Available candidates: {len(candidates)}")
         
         return selected
 
@@ -396,8 +415,11 @@ class ExamScheduler:
                             exam_id=exam["id_examen"]
                         )
                         
-                        if not pack_profs:
-                            print(f"  [SKIP] Pack (no professors available)")
+                        # ✅ CRITICAL: Don't create planning if we don't have enough professors
+                        needed = self.required_surveillants(pack["type"])
+                        if len(pack_profs) < needed:
+                            print(f"  [SKIP] Pack for exam {exam['id_examen']}: "
+                                  f"Insufficient professors ({len(pack_profs)}/{needed})")
                             continue
 
                         # ✅ PostgreSQL: Use RETURNING to get id_planning
