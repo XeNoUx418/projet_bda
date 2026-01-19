@@ -398,8 +398,11 @@ def generate_planning(pid: int):
 def delete_planning(pid: int):
     """
     ✅ OPTIMIZED: PostgreSQL-optimized bulk delete
-    Uses DELETE ... USING for better performance
+    Deletes planning data and optionally the period itself
     """
+    # Get optional query parameter to delete period too
+    delete_period = request.args.get("delete_period", "false").lower() == "true"
+    
     conn = get_conn()
     try:
         cur = conn.cursor()
@@ -431,8 +434,24 @@ def delete_planning(pid: int):
             AND c.id_periode = %s
         """, (pid,))
         
+        # Optionally delete the period and its creneaux
+        if delete_period:
+            # Delete creneaux
+            cur.execute("""
+                DELETE FROM creneaux
+                WHERE id_periode = %s
+            """, (pid,))
+            
+            # Delete period
+            cur.execute("""
+                DELETE FROM periodes_examens
+                WHERE id_periode = %s
+            """, (pid,))
+        
         conn.commit()
-        return ok({"deleted_period": pid, "message": "Planning deleted successfully"})
+        
+        message = "Planning and period deleted successfully" if delete_period else "Planning deleted successfully"
+        return ok({"deleted_period": pid, "period_removed": delete_period, "message": message})
     except Exception as e:
         conn.rollback()
         return fail(f"Delete error: {str(e)}", 500)
@@ -459,6 +478,55 @@ def preview(pid: int):
         LIMIT %s
     """, params=[pid, limit])
     return ok(df.to_dict(orient="records"))
+
+@app.get("/api/periodes/<int:pid>/conflicts/surveillances")
+def surveillance_conflicts(pid: int):
+    """
+    Check for surveillance conflicts:
+    1. Professors assigned to multiple exams at the same time
+    2. Professors with more than 3 surveillances per day
+    """
+    # Time slot conflicts
+    time_conflicts_df = query_df("""
+        SELECT 
+            p.nom AS "Professor",
+            c.date AS "Date",
+            TO_CHAR(c.heure_debut, 'HH24:MI') AS "Time",
+            COUNT(DISTINCT pe.id_examen) AS "ExamCount",
+            STRING_AGG(DISTINCT le.nom, ', ') AS "Rooms"
+        FROM surveillances s
+        JOIN professeurs p ON p.id_prof = s.id_prof
+        JOIN planning_examens pe ON pe.id_planning = s.id_planning
+        JOIN creneaux c ON c.id_creneau = pe.id_creneau
+        JOIN lieux_examen le ON le.id_lieu = pe.id_lieu
+        WHERE c.id_periode = %s
+        GROUP BY p.id_prof, p.nom, c.date, c.heure_debut
+        HAVING COUNT(DISTINCT pe.id_examen) > 1
+        ORDER BY c.date, c.heure_debut, p.nom
+    """, params=[pid])
+    
+    # Daily overload conflicts
+    daily_conflicts_df = query_df("""
+        SELECT 
+            p.nom AS "Professor",
+            c.date AS "Date",
+            COUNT(DISTINCT s.id_planning) AS "DailyCount"
+        FROM surveillances s
+        JOIN professeurs p ON p.id_prof = s.id_prof
+        JOIN planning_examens pe ON pe.id_planning = s.id_planning
+        JOIN creneaux c ON c.id_creneau = pe.id_creneau
+        WHERE c.id_periode = %s
+        GROUP BY p.id_prof, p.nom, c.date
+        HAVING COUNT(DISTINCT s.id_planning) > 3
+        ORDER BY "DailyCount" DESC, c.date
+    """, params=[pid])
+    
+    return ok({
+        "time_conflicts": time_conflicts_df.to_dict(orient="records"),
+        "daily_conflicts": daily_conflicts_df.to_dict(orient="records"),
+        "total_time_conflicts": len(time_conflicts_df),
+        "total_daily_conflicts": len(daily_conflicts_df)
+    })
 
 @app.get("/api/periodes/<int:pid>/conflicts/rooms")
 def room_conflicts(pid: int):
