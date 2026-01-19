@@ -478,16 +478,16 @@ def preview(pid: int):
 def surveillance_conflicts(pid: int):
     """
     Check for surveillance conflicts:
-    1. Professors assigned to multiple exams at the same time
+    1. Professors assigned to multiple planning entries at the same time
     2. Professors with more than 3 surveillances per day
     """
-    # Time slot conflicts
+    # Time slot conflicts (FIXED: use id_planning not id_examen)
     time_conflicts_df = query_df("""
         SELECT 
             p.nom AS "Professor",
             c.date AS "Date",
             TO_CHAR(c.heure_debut, 'HH24:MI') AS "Time",
-            COUNT(DISTINCT pe.id_examen) AS "ExamCount",
+            COUNT(DISTINCT pe.id_planning) AS "PlanningCount",
             STRING_AGG(DISTINCT le.nom, ', ') AS "Rooms"
         FROM surveillances s
         JOIN professeurs p ON p.id_prof = s.id_prof
@@ -496,7 +496,7 @@ def surveillance_conflicts(pid: int):
         JOIN lieux_examen le ON le.id_lieu = pe.id_lieu
         WHERE c.id_periode = %s
         GROUP BY p.id_prof, p.nom, c.date, c.heure_debut
-        HAVING COUNT(DISTINCT pe.id_examen) > 1
+        HAVING COUNT(DISTINCT pe.id_planning) > 1
         ORDER BY c.date, c.heure_debut, p.nom
     """, params=[pid])
     
