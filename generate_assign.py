@@ -1,10 +1,3 @@
-#!/usr/bin/env python3
-"""
-Optimized Exam Scheduler for PostgreSQL
-- Batch inserts using execute_values
-- Direct function call (no subprocess)
-- Proper indexing support
-"""
 import sys
 from collections import defaultdict
 from datetime import datetime
