@@ -1,11 +1,17 @@
 #!/usr/bin/env python3
+"""
+Optimized Exam Scheduler for PostgreSQL
+- Batch inserts using execute_values
+- Direct function call (no subprocess)
+- Proper indexing support
+"""
 import sys
 from collections import defaultdict
 from datetime import datetime
+from psycopg2.extras import RealDictCursor, execute_values
 
 # Import PostgreSQL connector and our centralized DB config
 from db import get_conn
-from psycopg2.extras import RealDictCursor
 
 # --------------------------------------------------
 # MAIN SCHEDULER
@@ -114,6 +120,9 @@ class ExamScheduler:
         # Track which professors are assigned to which time slots
         # Format: prof_slot_assignments[prof_id][(date, time)] = exam_id
         self.prof_slot_assignments = defaultdict(dict)
+        
+        # ✅ NEW: Cache for group conflicts (optimization)
+        self.group_exam_dates = defaultdict(set)
 
 
     # --------------------------------------------------
@@ -249,18 +258,13 @@ class ExamScheduler:
             return room
 
     # --------------------------------------------------
-    # CONFLICT CHECK
+    # CONFLICT CHECK (OPTIMIZED)
     # --------------------------------------------------
     def group_has_exam_same_day(self, group_id, date):
-        self.cursor.execute("""
-            SELECT 1
-            FROM planning_examens pe
-            JOIN planning_groupes pg ON pg.id_planning = pe.id_planning
-            JOIN creneaux c ON c.id_creneau = pe.id_creneau
-            WHERE pg.id_groupe = %s AND c.date = %s
-            LIMIT 1
-        """, (group_id, date))
-        return self.cursor.fetchone() is not None
+        """
+        ✅ OPTIMIZED: Use in-memory cache instead of querying DB every time
+        """
+        return date in self.group_exam_dates[group_id]
     
     def required_surveillants(self, room_type):
         """
@@ -331,7 +335,7 @@ class ExamScheduler:
 
 
     # --------------------------------------------------
-    # MAIN GENERATION
+    # MAIN GENERATION (OPTIMIZED WITH BATCH INSERTS)
     # --------------------------------------------------
     def generate(self):
 
@@ -351,6 +355,11 @@ class ExamScheduler:
                 waves[idx].append(exam)
 
         print(f"[INFO] Total waves: {len(waves)}")
+
+        # ✅ OPTIMIZATION: Batch insert buffers
+        planning_batch = []
+        surveillance_batch = []
+        groupes_batch = []
 
         # ---- Schedule wave by wave
         for wave_idx in sorted(waves.keys()):
@@ -400,7 +409,7 @@ class ExamScheduler:
                             print(f"  [SKIP] No room for pack")
                             continue
 
-                        # ✅ PostgreSQL: Use RETURNING instead of lastrowid
+                        # ✅ PostgreSQL: Use RETURNING to get id_planning
                         self.cursor.execute("""
                             INSERT INTO planning_examens (id_examen, id_creneau, id_lieu)
                             VALUES (%s, %s, %s)
@@ -409,12 +418,9 @@ class ExamScheduler:
 
                         planning_id = self.cursor.fetchone()["id_planning"]
 
-                        # Reuse the SAME professors for all packs
+                        # ✅ Batch: Collect surveillance data
                         for pid in shared_profs:
-                            self.cursor.execute("""
-                                INSERT INTO surveillances (id_prof, id_planning)
-                                VALUES (%s, %s)
-                            """, (pid, planning_id))
+                            surveillance_batch.append((pid, planning_id))
 
                         # Handle merged/split group labels
                         if len(pack["groups"]) > 1:
@@ -422,17 +428,35 @@ class ExamScheduler:
                         else:
                             merged_codes = None
 
+                        # ✅ Batch: Collect planning_groupes data
                         for g in pack["groups"]:
-                            self.cursor.execute("""
-                                INSERT INTO planning_groupes
-                                (id_planning, id_groupe, split_part, merged_groups)
-                                VALUES (%s, %s, %s, %s)
-                            """, (
+                            groupes_batch.append((
                                 planning_id,
                                 g["id_groupe"],
                                 pack["split_part"],
                                 merged_codes
                             ))
+                            
+                            # ✅ Update cache for conflict checking
+                            self.group_exam_dates[g["id_groupe"]].add(slot["date"])
+
+        # ✅ BATCH INSERT: surveillances
+        if surveillance_batch:
+            print(f"[INFO] Inserting {len(surveillance_batch)} surveillances...")
+            execute_values(
+                self.cursor,
+                "INSERT INTO surveillances (id_prof, id_planning) VALUES %s",
+                surveillance_batch
+            )
+
+        # ✅ BATCH INSERT: planning_groupes
+        if groupes_batch:
+            print(f"[INFO] Inserting {len(groupes_batch)} planning_groupes...")
+            execute_values(
+                self.cursor,
+                "INSERT INTO planning_groupes (id_planning, id_groupe, split_part, merged_groups) VALUES %s",
+                groupes_batch
+            )
 
         self.conn.commit()
         print("[SUCCESS] Planning generation completed")
@@ -443,7 +467,22 @@ class ExamScheduler:
 
     
 # --------------------------------------------------
-# ENTRY POINT
+# DIRECT FUNCTION CALL (NO SUBPROCESS)
+# --------------------------------------------------
+def generate_planning_for_period(period_id: int):
+    """
+    ✅ NEW: Function that can be called directly from Flask
+    without using subprocess
+    """
+    scheduler = ExamScheduler(period_id)
+    try:
+        scheduler.generate()
+    finally:
+        scheduler.close()
+
+    
+# --------------------------------------------------
+# ENTRY POINT (for CLI usage)
 # --------------------------------------------------
 if __name__ == "__main__":
     if len(sys.argv) != 2:
@@ -456,8 +495,4 @@ if __name__ == "__main__":
         print(f"Error: period_id must be an integer, got '{sys.argv[1]}'")
         sys.exit(1)
     
-    scheduler = ExamScheduler(period_id)
-    try:
-        scheduler.generate()
-    finally:
-        scheduler.close()
+    generate_planning_for_period(period_id)
