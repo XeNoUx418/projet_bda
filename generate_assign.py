@@ -14,6 +14,8 @@ class ExamScheduler:
     def __init__(self, period_id: int):
         self.period_id = period_id
         self.conn = get_conn()
+        # ✅ TRANSACTION SAFETY: Disable autocommit for rollback capability
+        self.conn.autocommit = False
         self.cursor = self.conn.cursor(cursor_factory=RealDictCursor)
 
         # Global round-robin pointers
@@ -140,10 +142,13 @@ class ExamScheduler:
         i = 0
         n = len(groups)
 
+        # ✅ SAFETY: Convert annee to string to avoid crashes
+        str_annee = str(annee) if annee is not None else ""
+
         # ======================
         # LICENCE CASE
         # ======================
-        if annee.startswith("L"):
+        if str_annee.startswith("L"):
             while i < n:
                 # Merge pairs
                 if i + 1 < n:
@@ -398,6 +403,9 @@ class ExamScheduler:
                         print(f"  [SKIP] Exam {exam['id_examen']} (no slot)")
                         continue
 
+                    # Track if at least one pack was successfully scheduled
+                    successfully_scheduled_packs = []
+
                     # Now assign rooms and professors for EACH PACK separately
                     for pack in packs:
                         room = self.assign_room(pack)
@@ -449,8 +457,14 @@ class ExamScheduler:
                                 pack["split_part"],
                                 merged_codes
                             ))
-                            
-                            # ✅ Update cache for conflict checking
+                        
+                        # Track successfully scheduled pack
+                        successfully_scheduled_packs.append(pack)
+                    
+                    # ✅ CRITICAL FIX: Update group_exam_dates ONCE per exam, AFTER all packs
+                    # This prevents fake conflicts between packs of the same exam
+                    if successfully_scheduled_packs:
+                        for g in groups:
                             self.group_exam_dates[g["id_groupe"]].add(slot["date"])
 
         # ✅ BATCH INSERT: surveillances
@@ -487,7 +501,7 @@ class ExamScheduler:
                 p.nom AS professor,
                 c.date,
                 TO_CHAR(c.heure_debut, 'HH24:MI') AS time,
-                COUNT(DISTINCT pe.id_examen) AS exam_count,
+                COUNT(DISTINCT pe.id_planning) AS planning_count,
                 STRING_AGG(DISTINCT le.nom, ', ') AS rooms
             FROM surveillances s
             JOIN professeurs p ON p.id_prof = s.id_prof
@@ -496,7 +510,7 @@ class ExamScheduler:
             JOIN lieux_examen le ON le.id_lieu = pe.id_lieu
             WHERE c.id_periode = %s
             GROUP BY p.id_prof, p.nom, c.date, c.heure_debut
-            HAVING COUNT(DISTINCT pe.id_examen) > 1
+            HAVING COUNT(DISTINCT pe.id_planning) > 1
             ORDER BY c.date, c.heure_debut, p.nom
         """, (self.period_id,))
         
@@ -506,7 +520,7 @@ class ExamScheduler:
             print(f"⚠️  WARNING: Found {len(conflicts)} time slot conflicts:")
             for conf in conflicts[:10]:  # Show first 10
                 print(f"  - {conf['professor']} on {conf['date']} at {conf['time']}: "
-                      f"{conf['exam_count']} exams in rooms: {conf['rooms']}")
+                      f"{conf['planning_count']} planning entries in rooms: {conf['rooms']}")
             if len(conflicts) > 10:
                 print(f"  ... and {len(conflicts) - 10} more conflicts")
         else:
@@ -551,10 +565,18 @@ def generate_planning_for_period(period_id: int):
     """
     ✅ NEW: Function that can be called directly from Flask
     without using subprocess
+    
+    ✅ TRANSACTION SAFETY: Rolls back on failure
     """
     scheduler = ExamScheduler(period_id)
     try:
         scheduler.generate()
+        print("[SUCCESS] Planning committed to database")
+    except Exception as e:
+        print(f"[ERROR] Generation failed: {e}")
+        scheduler.conn.rollback()
+        print("[ROLLBACK] Changes reverted")
+        raise
     finally:
         scheduler.close()
 
